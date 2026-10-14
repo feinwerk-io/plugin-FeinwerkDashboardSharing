@@ -1,0 +1,28 @@
+{
+    "FeinwerkDashboardSharing": {
+        "PluginDescription": "Share a Matomo dashboard with your team or everyone. Recipients get an auto-synced, read-only copy.",
+        "ShareDashboard": "Share this dashboard",
+        "SharedDashboards": "Import a shared dashboard",
+        "ShareName": "Name for recipients",
+        "ShareWhoTitle": "Who can subscribe to it",
+        "ShareToAll": "All users",
+        "ShareSpecificUsers": "Specific users",
+        "ShareEnterLogins": "Or enter logins (comma-separated):",
+        "ShareUsersAdminOnly": "Only admins can pick users from a list. Enter the logins below instead.",
+        "ShareSubmit": "Share",
+        "Cancel": "Cancel",
+        "Close": "Close",
+        "MyShares": "My shares",
+        "Unshare": "Stop sharing",
+        "Subscribe": "Subscribe",
+        "Unsubscribe": "Unsubscribe",
+        "Subscribers": "%s subscriber(s)",
+        "NoShares": "You have not shared any dashboard yet.",
+        "NoAvailableShares": "No shared dashboards are available to you.",
+        "SyncedBadge": "Synced from %s",
+        "SyncedNotice": "This dashboard is synced from %s and is read-only. The owner's changes appear when you reopen it.",
+        "ShareToAllLabel": "everyone",
+        "SubscribedDone": "Subscribed. The dashboard was added to your dashboards.",
+        "ShareError": "The action could not be completed. Please try again."
+    }
+}

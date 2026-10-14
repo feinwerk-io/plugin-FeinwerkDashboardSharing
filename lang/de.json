@@ -1,0 +1,28 @@
+{
+    "FeinwerkDashboardSharing": {
+        "PluginDescription": "Teilen Sie ein Matomo-Dashboard mit Ihrem Team oder allen. Empfänger erhalten eine automatisch synchronisierte, schreibgeschützte Kopie.",
+        "ShareDashboard": "Dieses Dashboard teilen",
+        "SharedDashboards": "Geteiltes Dashboard importieren",
+        "ShareName": "Name für Empfänger",
+        "ShareWhoTitle": "Wer es abonnieren kann",
+        "ShareToAll": "Alle Benutzer",
+        "ShareSpecificUsers": "Bestimmte Benutzer",
+        "ShareEnterLogins": "Oder Benutzernamen eingeben (durch Komma getrennt):",
+        "ShareUsersAdminOnly": "Nur Administratoren können Benutzer aus einer Liste auswählen. Geben Sie die Benutzernamen stattdessen unten ein.",
+        "ShareSubmit": "Teilen",
+        "Cancel": "Abbrechen",
+        "Close": "Schließen",
+        "MyShares": "Meine Freigaben",
+        "Unshare": "Freigabe beenden",
+        "Subscribe": "Abonnieren",
+        "Unsubscribe": "Abo beenden",
+        "Subscribers": "%s Abonnent(en)",
+        "NoShares": "Sie haben noch kein Dashboard geteilt.",
+        "NoAvailableShares": "Es sind keine geteilten Dashboards für Sie verfügbar.",
+        "SyncedBadge": "Synchronisiert von %s",
+        "SyncedNotice": "Dieses Dashboard wird von %s synchronisiert und ist schreibgeschützt. Änderungen des Eigentümers erscheinen, wenn Sie es erneut öffnen.",
+        "ShareToAllLabel": "alle",
+        "SubscribedDone": "Abonniert. Das Dashboard wurde zu Ihren Dashboards hinzugefügt.",
+        "ShareError": "Die Aktion konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut."
+    }
+}

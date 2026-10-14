@@ -1,0 +1,202 @@
+// Dark-mode-aware styling without Matomo's own LESS theme variables or `.inDarkMode()` mixin:
+// those only exist from Matomo 5.10-5.12, and this plugin supports Matomo >= 5.0 (plugin.json). An
+// undefined LESS variable/mixin aborts Matomo's whole merged stylesheet (safe mode), so instead we
+// use CSS custom properties with literal light fallbacks -- var(--theme-color-*, #light) resolves to
+// the theme value when present (dark values are provided by core under [data-theme-mode="dark"]) and
+// to the fallback otherwise -- plus this local mixin for accent/status colours that have no theme var.
+// Verified across Matomo 5.3.2 / 5.11.2 / 5.14 with tests/lesscheck.php.
+.fwshInDarkMode(@rules) {
+    [data-theme-mode="dark"]:root & { @rules(); }
+    [data-theme-mode="auto"]:root & {
+        @media (prefers-color-scheme: dark) { @rules(); }
+    }
+}
+
+.fwsh-link {
+    color: ~"var(--theme-color-link, #1d72b8)";
+    cursor: pointer;
+    text-decoration: underline dotted;
+
+    &.fwsh-danger {
+        color: #c0392b;
+        .fwshInDarkMode({ color: #e2726a; });
+    }
+}
+
+.fwsh-shareControls {
+    margin: 6px 0 10px;
+
+    .fwsh-btn { margin-right: 6px; }
+}
+
+// "shared/subscribed" marker on a dashboard tab in the menu
+.fwsh-sharedTabIcon {
+    pointer-events: none; // a click must reach the menu link itself (Matomo's dashboard dropdown checks the target)
+    margin-left: 5px;
+    font-size: 11px;
+    opacity: 0.7;
+    vertical-align: middle;
+}
+
+.fwsh-linked {
+    margin: 6px 8px 10px;
+    padding: 6px 10px;
+    background: #fff7e6;
+    border: 1px solid #f0d9a8;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #7a5a1e;
+    .fwshInDarkMode({
+        background: ~"color-mix(in srgb, #dba62b 16%, transparent)";
+        border-color: ~"color-mix(in srgb, #dba62b 45%, transparent)";
+        color: #f0d08a;
+    });
+}
+
+.fwsh-overlay {
+    position: fixed;
+    top: 0; right: 0; bottom: 0; left: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 100000;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+}
+
+.fwsh-modal {
+    background: ~"var(--theme-color-background-base, #fff)";
+    color: ~"var(--theme-color-text, #212121)";
+    margin-top: 8vh;
+    width: 420px;
+    max-width: 92vw;
+    border-radius: 6px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+.fwsh-modalHead {
+    padding: 10px 14px;
+    font-weight: bold;
+    font-size: 14px;
+    border-bottom: 1px solid ~"var(--theme-color-border-alternative, #eee)";
+    position: relative;
+}
+
+.fwsh-modalClose {
+    position: absolute;
+    right: 10px;
+    top: 8px;
+    color: ~"var(--theme-color-text-lighter, #888)";
+    font-size: 18px;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.fwsh-modalBody {
+    padding: 12px 14px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.fwsh-label { display: block; font-size: 12px; color: ~"var(--theme-color-text-light, #555)"; margin: 6px 0 3px; }
+
+.fwsh-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 6px 8px;
+    margin-bottom: 4px;
+    background: ~"var(--theme-color-background-base, #fff)";
+    color: ~"var(--theme-color-text, #212121)";
+    border: 1px solid ~"var(--theme-color-border-alternative, #ccc)";
+    border-radius: 3px;
+
+    &:focus { border-color: ~"var(--theme-color-link, #1d72b8)"; outline: none; }
+}
+
+.fwsh-sectionTitle { font-size: 12px; font-weight: bold; color: ~"var(--theme-color-text-light, #555)"; margin: 12px 0 4px; }
+.fwsh-radio { display: block; margin: 4px 0; font-size: 13px; cursor: pointer; color: ~"var(--theme-color-text, #212121)"; }
+
+.fwsh-userList {
+    max-height: 170px;
+    overflow-y: auto;
+    border: 1px solid ~"var(--theme-color-border-alternative, #ddd)";
+    border-radius: 3px;
+    padding: 4px;
+    margin: 4px 0 6px;
+}
+
+.fwsh-userItem {
+    display: block;
+    font-size: 13px;
+    color: ~"var(--theme-color-text, #212121)";
+    padding: 3px 6px;
+    border-radius: 3px;
+    cursor: pointer;
+
+    &:hover { background: ~"var(--theme-color-background-tinyContrast, #f2f7fc)"; }
+}
+
+.fwsh-hint { color: ~"var(--theme-color-text-lighter, #888)"; font-size: 12px; margin: 4px 0; }
+
+.fwsh-btn {
+    padding: 6px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    background: ~"var(--theme-color-background-tinyContrast, #f5f5f5)";
+    border: 1px solid ~"var(--theme-color-border-alternative, #ccc)";
+    border-radius: 3px;
+    color: ~"var(--theme-color-text, #333)";
+
+    &:hover { background: ~"var(--theme-color-background-lowContrast, #ebebeb)"; }
+    &:disabled { opacity: 0.5; cursor: default; }
+}
+
+.fwsh-btnPrimary {
+    background: ~"var(--theme-color-link, #1d72b8)";
+    color: #fff;
+    border-color: ~"var(--theme-color-link, #1a66a5)";
+
+    &:hover { opacity: 0.9; }
+}
+
+.fwsh-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin: 14px 0 4px;
+    padding-top: 10px;
+    border-top: 1px solid ~"var(--theme-color-border-alternative, #eee)";
+}
+
+.fwsh-sub { margin: 16px 0 6px; font-size: 13px; font-weight: bold; }
+
+// Matomo's Materialize CSS hides native checkboxes/radios (opacity:0, off-screen) and re-renders
+// them via a sibling <span>. Our simple inputs have no such span, so force native rendering back
+// on -- scoped to our dialog only, so Matomo's own forms are untouched.
+.fwsh-modal {
+    input[type="checkbox"],
+    input[type="radio"] {
+        position: static !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        width: auto !important;
+        height: auto !important;
+        margin: 0 6px 0 0 !important;
+        vertical-align: middle;
+        -webkit-appearance: auto !important;
+        -moz-appearance: auto !important;
+        appearance: auto !important;
+    }
+}
+
+.fwsh-shareRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+    border-top: 1px solid ~"var(--theme-color-border-alternative, #f0f0f0)";
+    font-size: 13px;
+
+    .fwsh-shareName { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; }
+    .fwsh-shareMeta { color: ~"var(--theme-color-text-lighter, #888)"; }
+}

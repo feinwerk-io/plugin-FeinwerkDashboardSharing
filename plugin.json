@@ -1,0 +1,13 @@
+{
+    "name": "FeinwerkDashboardSharing",
+    "description": "Share a Matomo dashboard with your team or everyone. Recipients get an auto-synced, read-only copy that always reflects your current version.",
+    "version": "1.0.2",
+    "theme": false,
+    "keywords": ["dashboard", "sharing", "share", "team", "read-only", "sync"],
+    "require": { "matomo": ">=5.0.0-b4,<6.0.0-b1", "php": ">=8.1.0" },
+    "license": "GPL v3+",
+    "homepage": "https://feinwerk.io",
+    "authors": [{ "name": "Peter Boehlke, Feinwerk.io", "email": "support@feinwerk.io", "homepage": "https://feinwerk.io" }],
+    "category": "customisation",
+    "support": { "email": "support@feinwerk.io", "docs": "https://plugins.feinwerk.io/en/docs/plugins/FeinwerkDashboardSharing" }
+}
