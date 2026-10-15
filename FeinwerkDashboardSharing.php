@@ -88,6 +88,17 @@ class FeinwerkDashboardSharing extends \Piwik\Plugin
         (new Dao\Sharing())->install();
     }
 
+    /** Users deleted while the plugin was inactive left their rows behind: remove them before they can match a new user. */
+    public function activate()
+    {
+        try {
+            (new Dao\Sharing())->deleteRowsOfDeletedUsers();
+        } catch (\Exception $e) {
+            // A failed cleanup must not keep the plugin from being activated.
+            \Piwik\Log::warning('FeinwerkDashboardSharing: removing rows of deleted users failed: ' . $e->getMessage());
+        }
+    }
+
     public function uninstall()
     {
         (new Dao\Sharing())->uninstall();

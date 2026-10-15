@@ -11,6 +11,8 @@ process.on('uncaughtException', function (e) { console.error('UNCAUGHT:', e); pr
 
 var triggered = [];
 var classes = {};
+var texts = [];   // every text set through $(...).text(value)
+var failing = {}; // action -> true: that request fails (Matomo 6 answers errors with HTTP 400/500)
 function jq() {
     var o = function () { return o; };
     var methods = ['find', 'first', 'each', 'on', 'one', 'attr', 'append', 'prepend', 'after',
@@ -25,6 +27,7 @@ function jq() {
     o.addClass = function (c) { classes[c] = true; return o; };
     o.removeClass = function (c) { delete classes[c]; return o; };
     o.trigger = function (name) { triggered.push(name); return o; };
+    o.text = function (t) { if (t !== undefined) { texts.push(t); } return o; };
     return o;
 }
 var $ = function (arg) { if (typeof arg === 'function') { arg(); return; } return jq(); };
@@ -34,8 +37,10 @@ window.console = console;
 window.$ = $; window.jQuery = $;
 // linked mirror dashboard: getLinkInfo returns {linked:true}; everything else resolves with []
 var linkInfoCalls = 0;
+var syncCalls = 0;
+var page = { category: 'Dashboard_Dashboard', subcategory: '1' }; // the URL hash parameters of the current page
 window.broadcast = {
-    getValueFromHash: function () { return '1'; }, getValueFromUrl: function () { return '1'; }
+    getValueFromHash: function (name) { return page[name] || ''; }, getValueFromUrl: function (name) { return page[name] || ''; }
 };
 window.piwik = { idSite: 1, token_auth: 't', userLogin: 'tester', on: function () {} };
 window.ajaxHelper = function () {
@@ -44,7 +49,9 @@ window.ajaxHelper = function () {
         addParams: function (p) { if (p && p.action) { action = p.action; } },
         withTokenInUrl: function () {}, setFormat: function () {},
         send: function () {
+            if (failing[action]) { return Promise.reject({ status: 400 }); }
             if (action === 'getLinkInfo') { linkInfoCalls++; return Promise.resolve({ linked: true, owner: 'bob' }); }
+            if (action === 'syncLinkedDashboard') { syncCalls++; return Promise.resolve({ synced: true }); }
             return Promise.resolve([]);
         }
     };
@@ -96,9 +103,56 @@ assert(FS.menuLinkDashboardId(undefined, undefined) === null, 'nothing -> null')
 assert(FS.dashboardMenuLinks.indexOf('#secondNavBar .reportingMenu') === 0, 'marker targets the reporting menu, not the site selector');
 console.log('SMOKE OK: dashboard menu marker');
 
+// after unsubscribing, the page reloads on the first dashboard (id 1), not on the removed copy
+assert(typeof FS.firstDashboardUrl === 'function', 'firstDashboardUrl published');
+assert(FS.firstDashboardUrl('https://m/index.php?module=CoreHome&action=index&idSite=1#?idSite=1&category=Dashboard_Dashboard&subcategory=7')
+    === 'https://m/index.php?module=CoreHome&action=index&idSite=1#?idSite=1&category=Dashboard_Dashboard&subcategory=1', 'hash subcategory -> 1');
+assert(FS.firstDashboardUrl('https://m/index.php?module=CoreHome&subcategory=12&idSite=1#?subcategory=12&period=day')
+    === 'https://m/index.php?module=CoreHome&subcategory=1&idSite=1#?subcategory=1&period=day', 'query and hash subcategory -> 1');
+assert(FS.firstDashboardUrl('https://m/index.php?module=CoreHome#?category=General_Visitors&subcategory=General_Overview')
+    === 'https://m/index.php?module=CoreHome#?category=General_Visitors&subcategory=General_Overview', 'non-numeric subcategory untouched');
+console.log('SMOKE OK: reload target after unsubscribing');
+
 // let the bootstrap's async .then() chain (enterDashboard -> getLinkInfo -> sync) run
 setTimeout(function () {
     assert(linkInfoCalls >= 1, 'bootstrap called getLinkInfo');
     assert(FS.readOnly === true && classes['fwsh-readonly'] === true, 'mirror dashboard sets the marker');
+    assert(triggered.indexOf('fwsh:synced') !== -1, 'a successful auto-sync is announced (fwsh:synced): ' + JSON.stringify(triggered));
     console.log('SMOKE OK: bootstrap + async callback chain ran with no error');
+
+    // A failed list request (share dialog: users + my shares, import panel: available shares) must show the error
+    // hint instead of ending in an unhandled promise rejection (process handler above exits 1).
+    failing = { getShareableUsers: true, getMyShares: true, getAvailableShares: true };
+    texts.length = 0;
+    assert(typeof FS.openShareDialog === 'function' && typeof FS.openAvailablePanel === 'function', 'dialogs published');
+    FS.openShareDialog();
+    FS.openAvailablePanel();
+    setTimeout(function () {
+        var hints = texts.filter(function (t) { return t === 'FeinwerkDashboardSharing_ShareError'; }).length;
+        assert(hints === 3, 'each failed list load shows the error hint: ' + hints);
+        console.log('SMOKE OK: failed list loads show the error hint, no unhandled rejection');
+        failing = {};
+
+        // Goal pages (and other reports) use numeric subcategories too: goal 1 is not dashboard 1, the plugin stays idle.
+        page = { category: 'Goals_Goals', subcategory: '1' };
+        FS.setReadOnlyMarker(false);
+        triggered.length = 0;
+        var callsBefore = linkInfoCalls + syncCalls;
+        FS.enterDashboard();
+        setTimeout(function () {
+            assert(linkInfoCalls + syncCalls === callsBefore, 'goal page 1: no getLinkInfo/sync for dashboard 1');
+            assert(FS.readOnly === false && !classes['fwsh-readonly'], 'goal page 1: no read-only marker');
+            assert(triggered.length === 0, 'goal page 1: no fwsh events: ' + JSON.stringify(triggered));
+            console.log('SMOKE OK: a goal page with the id of a linked dashboard is left alone');
+
+            page = { category: 'Dashboard_Dashboard', subcategory: '1' };
+            var linkBefore = linkInfoCalls;
+            FS.enterDashboard();
+            setTimeout(function () {
+                assert(linkInfoCalls === linkBefore + 1, 'dashboard 1: getLinkInfo asked once');
+                assert(FS.readOnly === true && classes['fwsh-readonly'] === true, 'dashboard 1 is still recognised as a linked copy');
+                console.log('SMOKE OK: dashboard pages unchanged');
+            }, 60);
+        }, 60);
+    }, 60);
 }, 60);

@@ -156,7 +156,11 @@
     color: #fff;
     border-color: ~"var(--theme-color-link, #1a66a5)";
 
-    &:hover { opacity: 0.9; }
+    // keep the primary colour on hover (.fwsh-btn:hover would give it the light grey background behind white text)
+    &:hover { background: ~"var(--theme-color-link, #1d72b8)"; opacity: 0.9; }
+
+    // the dark theme's link colour is light (#778fd4): white text would reach only about 3:1, dark text about 5:1
+    .fwshInDarkMode({ color: ~"var(--theme-color-background-contrast, #202329)"; });
 }
 
 .fwsh-footer {

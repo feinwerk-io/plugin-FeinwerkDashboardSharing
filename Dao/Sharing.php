@@ -241,6 +241,38 @@ class Sharing
         }
     }
 
+    /**
+     * Remove shares, target rows and subscriptions of logins that no longer exist, then shares with a list of logins
+     * whose last login is gone. UsersManager.deleteUser cleans up while the plugin is active; a user deleted while it
+     * was inactive would otherwise leave rows behind, and a new user with the same login would see the shares meant
+     * for the old one. Each login is looked up on its own (no JOIN): core's user table may have another collation.
+     */
+    public function deleteRowsOfDeletedUsers()
+    {
+        $logins = Db::fetchAll(sprintf(
+            'SELECT `owner_login` AS `login` FROM `%s` UNION SELECT `target_login` FROM `%s` UNION SELECT `subscriber_login` FROM `%s`',
+            $this->sharePrefixed,
+            $this->targetPrefixed,
+            $this->linkPrefixed
+        ));
+        $userTable = Common::prefixTable('user');
+        foreach ($logins as $row) {
+            if (!Db::fetchOne(sprintf('SELECT 1 FROM `%s` WHERE `login` = ?', $userTable), array($row['login']))) {
+                $this->deleteAllForUser($row['login']);
+            }
+        }
+
+        $withoutTargets = Db::fetchAll(sprintf(
+            'SELECT s.`idshare` FROM `%s` s WHERE s.`share_to_all` = 0
+             AND NOT EXISTS (SELECT 1 FROM `%s` t WHERE t.`idshare` = s.`idshare`)',
+            $this->sharePrefixed,
+            $this->targetPrefixed
+        ));
+        foreach ($withoutTargets as $row) {
+            $this->deleteShare($row['idshare']);
+        }
+    }
+
     /** Remove shares owned by, target rows referencing, and subscriptions of the given user. */
     public function deleteAllForUser($login)
     {

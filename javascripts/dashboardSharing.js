@@ -8,7 +8,8 @@
  * Read-only marker (consumed by e.g. FeinwerkDashboardSegment): while a mirror dashboard is open,
  * window.FeinwerkDashboardSharing.readOnly === true and #dashboardWidgetsArea has the class
  * `fwsh-readonly`. The jQuery event `fwsh:readonlychange` is triggered on `document` whenever that
- * state is (re)determined.
+ * state is (re)determined. After an auto-sync replaced a mirror's layout and per-widget overrides on the
+ * server, `fwsh:synced` is triggered on `document` with the dashboard id.
  *
  * @link    https://matomo.org
  * @license https://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -23,10 +24,14 @@
         synced: {}            // idDashboard -> true once auto-synced this page session
     };
 
-    // Current dashboard id from the URL hash (Dashboard uses `subcategory`). null when unknown.
+    // Current dashboard id from the URL hash (category `Dashboard_Dashboard`, the id is the `subcategory`). null on
+    // every other page: goal pages and other reports use numeric subcategories too.
     function currentDashboardId() {
         var broadcast = window.broadcast;
-        var value = (broadcast && (broadcast.getValueFromHash('subcategory') || broadcast.getValueFromUrl('subcategory'))) || '';
+        if (!broadcast) { return null; }
+        var category = broadcast.getValueFromHash('category') || broadcast.getValueFromUrl('category') || '';
+        if (category !== 'Dashboard_Dashboard') { return null; }
+        var value = broadcast.getValueFromHash('subcategory') || broadcast.getValueFromUrl('subcategory') || '';
         var id = parseInt(value, 10);
         return isNaN(id) ? null : id;
     }
@@ -60,6 +65,13 @@
     }
 
     function notifyShareError() { notify(_pk_translate('FeinwerkDashboardSharing_ShareError'), 'error'); }
+
+    // A list that could not be loaded shows the error hint instead of staying empty. Also the rejection handler of
+    // the request: Matomo 6 answers failed requests with HTTP 400/500, so ajaxHelper's promise rejects.
+    function showLoadError($container) {
+        $container.empty();
+        $container.append(window.$('<div class="fwsh-hint"></div>').text(_pk_translate('FeinwerkDashboardSharing_ShareError')));
+    }
 
     // Publish whether the open dashboard is a read-only mirror (see file header).
     // Tracked here (not via .readOnly, which callers pre-set) so the event fires only on a real change.
@@ -131,7 +143,7 @@
                 $row.append($del);
                 $container.append($row);
             });
-        });
+        }, function () { showLoadError($container); });
     }
 
     function openShareDialog() {
@@ -173,7 +185,7 @@
                 $l.append(document.createTextNode(' ' + u));
                 $userList.append($l);
             });
-        });
+        }, function () { showLoadError($userList); });
         $all.on('change', function () { $specific.hide(); });
         $users.on('change', function () { $specific.show(); });
 
@@ -232,7 +244,7 @@
                 $row.append($sub);
                 $list.append($row);
             });
-        });
+        }, function () { showLoadError($list); });
     }
 
     function makeIconButton(iconClass, label, onClick) {
@@ -256,6 +268,21 @@
 
     function removeLinkedBanner() { window.$('#fwshLinked').remove(); }
 
+    // The page URL with the user's first dashboard (id 1: always there, stored or Matomo's built-in default) in place
+    // of the current one. Reloading on a removed copy makes Matomo switch dashboards right after loading, which aborts
+    // its widget list request ("Loading widget metadata was aborted").
+    function firstDashboardUrl(href) {
+        return String(href).replace(/([#&?]subcategory=)\d+(?=&|$)/g, function (match, prefix) { return prefix + '1'; });
+    }
+
+    function reloadOnFirstDashboard() {
+        var url = firstDashboardUrl(window.location.href);
+        if (url !== window.location.href && window.history && window.history.replaceState) {
+            window.history.replaceState(window.history.state, '', url);
+        }
+        window.location.reload();
+    }
+
     function showLinkedBanner(owner) {
         removeLinkedBanner();
         var $area = window.$('#dashboardWidgetsArea');
@@ -265,7 +292,7 @@
         var $unsub = window.$('<a href="javascript:;" class="fwsh-link"></a>').text(_pk_translate('FeinwerkDashboardSharing_Unsubscribe'));
         $unsub.on('click', function () {
             dsAjax('unsubscribe', {}, { idDashboard: currentDashboardId() })
-                .then(function () { window.location.reload(); }, notifyShareError);
+                .then(reloadOnFirstDashboard, notifyShareError);
         });
         $b.append(document.createTextNode(' ')).append($unsub);
         $area.before($b);
@@ -290,8 +317,11 @@
                 showLinkedBanner(info.owner);
                 if (!FeinwerkDashboardSharing.synced[id]) {
                     FeinwerkDashboardSharing.synced[id] = true;
-                    dsAjax('syncLinkedDashboard', {}, { idDashboard: id }).then(function () {
+                    dsAjax('syncLinkedDashboard', {}, { idDashboard: id }).then(function (result) {
                         reloadDashboardArea(id);
+                        // The server replaced the copy's layout and per-widget overrides: let other plugins that
+                        // loaded them for this page (FeinwerkDashboardSegment) read them again.
+                        if (result && result.synced) { window.$(document).trigger('fwsh:synced', [id]); }
                     }, function () {});
                 }
             } else {
@@ -363,6 +393,9 @@
     FeinwerkDashboardSharing.enterDashboard = enterDashboard;
     FeinwerkDashboardSharing.menuLinkDashboardId = menuLinkDashboardId;
     FeinwerkDashboardSharing.dashboardMenuLinks = DASHBOARD_MENU_LINKS;
+    FeinwerkDashboardSharing.openShareDialog = openShareDialog;
+    FeinwerkDashboardSharing.openAvailablePanel = openAvailablePanel;
+    FeinwerkDashboardSharing.firstDashboardUrl = firstDashboardUrl;
     window.FeinwerkDashboardSharing = FeinwerkDashboardSharing;
 
     window.$(function () {

@@ -20,6 +20,9 @@ use Piwik\Plugins\FeinwerkDashboardSharing\Dao\Sharing;
  */
 class SharingService
 {
+    /** Matomo's Dashboard plugin stores dashboard names with at most 100 characters (user_dashboard.name). */
+    const DASHBOARD_NAME_MAX_LENGTH = 100;
+
     /** @var Sharing */
     private $sharing;
     /** @var DashboardModel */
@@ -54,14 +57,16 @@ class SharingService
             throw new \Exception('Source dashboard not found');
         }
 
-        // Use a name that does not collide with the subscriber's existing dashboards, so a
-        // same-named dashboard is never confused with / appears to overwrite an existing one.
-        $name = $this->uniqueName($subscriberLogin, $share['name']);
-
         // Dashboard, overrides and link must appear together or not at all.
         $db = Db::get();
         $db->beginTransaction();
         try {
+            $this->storeDefaultDashboardIfNone($subscriberLogin);
+
+            // Use a name that does not collide with the subscriber's existing dashboards, so a
+            // same-named dashboard is never confused with / appears to overwrite an existing one.
+            $name = $this->uniqueName($subscriberLogin, $share['name']);
+
             $newIdDashboard = $this->dashboardModel->createNewDashboardForUser($subscriberLogin, $name, $layout);
             // Per-widget overrides are owned by the optional FeinwerkDashboardSegment plugin; it observes this event.
             \Piwik\Piwik::postEvent('FeinwerkDashboardSharing.copyWidgetOverrides',
@@ -114,6 +119,15 @@ class SharingService
         $this->sharing->deleteLink($subscriberLogin, $idDashboard);
         \Piwik\Piwik::postEvent('FeinwerkDashboardSharing.deleteWidgetOverrides',
             array($subscriberLogin, $idDashboard));
+
+        if ((int) $idDashboard === 1) {
+            // Up to 1.0.2 a subscription could take id 1, the user's main dashboard, which Matomo expects to exist:
+            // give the user Matomo's default dashboard back there instead of deleting it.
+            list($name, $layout) = $this->defaultDashboard();
+            $this->dashboardModel->updateLayoutForUser($subscriberLogin, 1, $layout);
+            $this->dashboardModel->updateDashboardName($subscriberLogin, 1, $name);
+            return;
+        }
         $this->dashboardModel->deleteDashboardForUser($idDashboard, $subscriberLogin);
     }
 
@@ -135,15 +149,40 @@ class SharingService
         }
     }
 
+    /**
+     * A user who never changed their dashboard has only Matomo's built-in default (id 1, not stored), so a new dashboard
+     * would get id 1 and take the place of the user's main dashboard. Store that default first, the way Matomo does on the
+     * user's first change (default layout, name "Dashboard"), so a subscription gets an id of its own.
+     */
+    public function storeDefaultDashboardIfNone($login)
+    {
+        if (!empty($this->dashboardModel->getAllDashboardsForUser($login))) {
+            return;
+        }
+        list($name, $layout) = $this->defaultDashboard();
+        $this->dashboardModel->createNewDashboardForUser($login, $name, $layout);
+    }
+
+    /** @return array{0:string, 1:string} name and layout of Matomo's built-in default dashboard */
+    protected function defaultDashboard()
+    {
+        return array(\Piwik\Piwik::translate('Dashboard_Dashboard'), (new \Piwik\Plugins\Dashboard\Dashboard())->getDefaultLayout());
+    }
+
+    /** The owner's layout, cleaned for the subscriber (see LayoutSanitizer), or false if the source is gone. */
     private function ownerLayout($ownerLogin, $ownerIdDashboard)
     {
         $rows = $this->dashboardModel->getLayoutForUser($ownerLogin, $ownerIdDashboard);
-        return (!empty($rows) && isset($rows[0]['layout'])) ? $rows[0]['layout'] : false;
+        if (empty($rows) || !isset($rows[0]['layout'])) {
+            return false;
+        }
+        return (new LayoutSanitizer())->sanitize($rows[0]['layout']);
     }
 
-    /** A dashboard name for $login that doesn't collide with their existing dashboards. */
-    private function uniqueName($login, $desiredName)
+    /** A dashboard name for $login that doesn't collide with their existing dashboards and fits Matomo's column. */
+    protected function uniqueName($login, $desiredName)
     {
+        $desiredName = mb_substr((string) $desiredName, 0, self::DASHBOARD_NAME_MAX_LENGTH);
         $existing = array();
         foreach ($this->dashboardModel->getAllDashboardsForUser($login) as $d) {
             if (isset($d['name'])) {
@@ -154,9 +193,10 @@ class SharingService
             return $desiredName;
         }
         $i = 2;
-        while (isset($existing[$desiredName . ' (' . $i . ')'])) {
-            $i++;
-        }
-        return $desiredName . ' (' . $i . ')';
+        do {
+            $suffix = ' (' . $i++ . ')';
+            $candidate = mb_substr($desiredName, 0, self::DASHBOARD_NAME_MAX_LENGTH - mb_strlen($suffix)) . $suffix;
+        } while (isset($existing[$candidate]));
+        return $candidate;
     }
 }

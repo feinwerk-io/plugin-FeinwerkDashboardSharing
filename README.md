@@ -1,6 +1,6 @@
 # FeinwerkDashboardSharing
 
-Share a Matomo dashboard with your team or with everyone. Recipients get an automatically
+Share a Matomo dashboard with your team. Recipients get an automatically
 synchronised, read-only copy that always reflects your current version.
 
 ## Description
@@ -10,13 +10,16 @@ see, you would normally have to recreate it for each person.
 
 FeinwerkDashboardSharing lets you share one of your dashboards:
 
-- **Share with specific users or everyone:** pick the Matomo users who may subscribe, or open the
-  dashboard to all users.
+- **Share with specific users or your whole team:** pick the Matomo users who may subscribe, or offer
+  the dashboard to all users who can see one of your websites.
 - **Auto-synced mirror:** a subscriber gets their own copy of the dashboard. When you change your
   dashboard, the copy is updated the next time the subscriber opens it.
 - **Read-only for recipients:** subscribers can look at the shared dashboard, but cannot change the
   layout or the widgets of the copy. Your original stays under your control.
 - **Stop sharing at any time:** withdrawing a share removes it from the list of available dashboards.
+- **Only within your websites:** a shared dashboard is offered only to users who can see at least one
+  of your websites (super users see every share). Recipients see the reports with their own
+  permissions, so only for websites they can access in Matomo.
 
 Documentation and more Plugins for Matomo: [Feinwerk Plugins](https://plugins.feinwerk.io/en/plugins/FeinwerkDashboardSharing).
 
@@ -56,8 +59,9 @@ FeinwerkDashboardSegment.
 
 1. Open the dashboard you want to share.
 2. Click **Share this dashboard**.
-3. Enter a name for recipients and choose who may subscribe: **All users**, or **Specific users**
-   with a comma-separated list of logins. Selecting specific users requires Matomo admin access.
+3. Enter a name for recipients (up to 100 characters) and choose who may subscribe: **All users who
+   can see one of your websites**, or **Specific users** with a comma-separated list of logins. Admins
+   can also pick the users from a list.
 4. Click **Share**.
 
 **Import a shared dashboard**

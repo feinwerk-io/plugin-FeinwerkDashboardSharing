@@ -1,7 +1,7 @@
 {
     "name": "FeinwerkDashboardSharing",
-    "description": "Share a Matomo dashboard with your team or everyone. Recipients get an auto-synced, read-only copy that always reflects your current version.",
-    "version": "1.0.2",
+    "description": "Share a Matomo dashboard with your team. Recipients get an auto-synced, read-only copy that always reflects your current version.",
+    "version": "1.0.4",
     "theme": false,
     "keywords": ["dashboard", "sharing", "share", "team", "read-only", "sync"],
     "require": { "matomo": ">=5.0.0-b4,<6.0.0-b1", "php": ">=8.1.0" },

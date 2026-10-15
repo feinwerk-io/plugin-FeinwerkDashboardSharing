@@ -25,6 +25,8 @@ use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
  */
 class DashboardRemovalTest extends IntegrationTestCase
 {
+    use SharingFixture;
+
     /** @var Sharing */
     private $sharing;
     /** @var DashboardModel */
@@ -40,6 +42,9 @@ class DashboardRemovalTest extends IntegrationTestCase
         FakeAccess::$superUser = false;
         FakeAccess::$identity = 'alice';
         FakeAccess::$idSitesView = array(1);
+
+        $this->createWebsites(1);
+        $this->createUser('bob', array(1));
     }
 
     public function test_removingASubscribedCopy_dropsTheSubscription()

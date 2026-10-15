@@ -5,7 +5,7 @@
         "SharedDashboards": "Import a shared dashboard",
         "ShareName": "Name for recipients",
         "ShareWhoTitle": "Who can subscribe to it",
-        "ShareToAll": "All users",
+        "ShareToAll": "All users who can see one of your websites",
         "ShareSpecificUsers": "Specific users",
         "ShareEnterLogins": "Or enter logins (comma-separated):",
         "ShareUsersAdminOnly": "Only admins can pick users from a list. Enter the logins below instead.",

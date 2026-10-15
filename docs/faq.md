@@ -1,6 +1,10 @@
 __Who can share a dashboard?__
 
-Every signed-in Matomo user can share their own dashboards. Click *Share this dashboard* above the widgets, then choose *All users* or enter the logins of specific users. Users with admin access also get a list of users to tick.
+Every signed-in Matomo user can share their own dashboards. Click *Share this dashboard* above the widgets, then choose *All users who can see one of your websites* or enter the logins of specific users. Users with admin access also get a list of users to tick.
+
+__Who sees a shared dashboard?__
+
+Only users who can see at least one of your websites, whether you share it with all users or with a list of logins. Super users see every share. If you and a subscriber no longer have a website in common, the copy keeps its last version and is no longer synchronised.
 
 __What do recipients get?__
 

@@ -25,31 +25,46 @@ class API extends \Piwik\Plugin\API
     private $sharing;
     /** @var SharingService */
     private $sharingService;
+    /** @var DashboardModel */
+    private $dashboardModel;
+    /** @var ShareAccess|null created on first use */
+    private $shareAccess;
 
-    public function __construct(?Sharing $sharing = null, ?SharingService $sharingService = null)
-    {
+    public function __construct(
+        ?Sharing $sharing = null,
+        ?SharingService $sharingService = null,
+        ?DashboardModel $dashboardModel = null,
+        ?ShareAccess $shareAccess = null
+    ) {
         $this->sharing = $sharing ?: new Sharing();
         $this->sharingService = $sharingService ?: new SharingService();
+        $this->dashboardModel = $dashboardModel ?: new DashboardModel();
+        $this->shareAccess = $shareAccess;
     }
 
     /**
-     * Share one of the current user's dashboards so others can subscribe to it.
+     * Share one of the current user's dashboards so others can subscribe to it. The name is stored as entered (also
+     * when called through the HTTP API) and always output as text.
+     * @unsanitized
      * @param string|array $targetLogins comma-separated logins (or array); ignored if $shareToAll
      * @return int the new share id
      */
     public function shareDashboard(int $idDashboard, string $name, $targetLogins = '', bool $shareToAll = false): int
     {
-        Piwik::checkUserIsNotAnonymous();
-        $login = Piwik::getCurrentUserLogin();
+        $login = $this->checkAndGetLogin();
         $this->checkDashboardOwnedBy($login, $idDashboard);
 
-        $targets = is_array($targetLogins)
-            ? $targetLogins
-            : array_filter(array_map('trim', explode(',', (string) $targetLogins)));
+        // Matomo 6 no longer trims request values: trim here, whether they come from the share dialog or the HTTP API.
+        $targets = is_array($targetLogins) ? $targetLogins : explode(',', (string) $targetLogins);
+        $targets = array_filter(array_map(function ($target) {
+            return is_scalar($target) ? trim((string) $target) : '';
+        }, $targets), 'strlen');
         if (!$shareToAll && empty($targets)) {
             throw new \Exception('A share needs at least one target user, or must be shared to all.');
         }
-        if (trim($name) === '') {
+        // The name becomes the subscribers' dashboard name, which Matomo stores with at most 100 characters.
+        $name = trim(mb_substr(trim($name), 0, SharingService::DASHBOARD_NAME_MAX_LENGTH));
+        if ($name === '') {
             $name = 'Shared dashboard';
         }
 
@@ -92,10 +107,12 @@ class API extends \Piwik\Plugin\API
 
     public function getAvailableShares(): array
     {
-        Piwik::checkUserIsNotAnonymous();
-        $login = Piwik::getCurrentUserLogin();
+        $login = $this->checkAndGetLogin();
         $result = array();
         foreach ($this->sharing->getSharesAvailableTo($login) as $share) {
+            if (!$this->shareAccess()->isVisibleToCurrentUser($share['owner_login'])) {
+                continue;
+            }
             if ($this->sharing->isSubscribed($share['idshare'], $login)) {
                 continue;
             }
@@ -116,12 +133,11 @@ class API extends \Piwik\Plugin\API
     /** Subscribe to a share: creates a linked, auto-synced dashboard. Returns the new idDashboard. */
     public function subscribeToShare(int $idShare): int
     {
-        Piwik::checkUserIsNotAnonymous();
-        $login = Piwik::getCurrentUserLogin();
+        $login = $this->checkAndGetLogin();
 
         $available = false;
         foreach ($this->sharing->getSharesAvailableTo($login) as $share) {
-            if ((int) $share['idshare'] === $idShare) {
+            if ((int) $share['idshare'] === $idShare && $this->shareAccess()->isVisibleToCurrentUser($share['owner_login'])) {
                 $available = true;
                 break;
             }
@@ -141,8 +157,13 @@ class API extends \Piwik\Plugin\API
     /** @return array{synced:bool} */
     public function syncLinkedDashboard(int $idDashboard): array
     {
-        Piwik::checkUserIsNotAnonymous();
-        return array('synced' => $this->sharingService->syncLink(Piwik::getCurrentUserLogin(), $idDashboard));
+        $login = $this->checkAndGetLogin();
+        $link = $this->sharing->getLink($login, $idDashboard);
+        $share = $link ? $this->sharing->getShare($link['idshare']) : false;
+        if ($share && !$this->shareAccess()->isVisibleToCurrentUser($share['owner_login'])) {
+            return array('synced' => false); // no website in common with the owner any more: keep the last copy as it is
+        }
+        return array('synced' => $this->sharingService->syncLink($login, $idDashboard));
     }
 
     /** @return array{linked:bool, owner?:string} */
@@ -193,6 +214,21 @@ class API extends \Piwik\Plugin\API
         return $result;
     }
 
+    private function shareAccess(): ShareAccess
+    {
+        if ($this->shareAccess === null) {
+            $this->shareAccess = new ShareAccess();
+        }
+        return $this->shareAccess;
+    }
+
+    /** The signed-in user's login; anonymous users get Matomo's no-access error. */
+    protected function checkAndGetLogin(): string
+    {
+        Piwik::checkUserIsNotAnonymous();
+        return Piwik::getCurrentUserLogin();
+    }
+
     private function checkDashboardOwnedBy(string $login, int $idDashboard): void
     {
         if (!$this->dashboardExists($login, $idDashboard)) {
@@ -203,7 +239,7 @@ class API extends \Piwik\Plugin\API
     /** True when $login still has a dashboard with this id (used to drop/skip dead shares). */
     private function dashboardExists(string $login, int $idDashboard): bool
     {
-        $rows = (new DashboardModel())->getLayoutForUser($login, $idDashboard);
+        $rows = $this->dashboardModel->getLayoutForUser($login, $idDashboard);
         return !empty($rows);
     }
 }
