@@ -9,7 +9,10 @@
 namespace Piwik\Plugins\FeinwerkDashboardSharing;
 
 use Piwik\Common;
+use Piwik\Option;
 use Piwik\Piwik;
+use Piwik\Plugins\FeinwerkDashboardSharing\Feedback\PluginFeedback;
+use Piwik\Plugins\FeinwerkDashboardSharing\Promo\PromoPlacements;
 
 class FeinwerkDashboardSharing extends \Piwik\Plugin
 {
@@ -22,7 +25,23 @@ class FeinwerkDashboardSharing extends \Piwik\Plugin
             'Db.getTablesInstalled'                  => 'getTablesInstalled',
             'UsersManager.deleteUser'                => 'deleteUser',
             'API.Dashboard.removeDashboard.end'      => 'onDashboardRemoved',
+            // Feinwerk promotion kit (docs/promo-kit.md of FeinwerkPageFilterReport): banner on the admin home,
+            // context boxes at the end of matching report pages; the tip line sits in the share dialog (DialogNotes)
+            'Template.adminHome'                     => 'addPromoBanner',
+            'Widget.filterWidgets'                   => 'addPromoBoxes',
         );
+    }
+
+    /** Template.adminHome: the banner of the Feinwerk promotion kit, once per page across all Feinwerk plugins. */
+    public function addPromoBanner(&$out)
+    {
+        PromoPlacements::adminHome($out);
+    }
+
+    /** Widget.filterWidgets: the context boxes of the Feinwerk promotion kit at the end of matching report pages. */
+    public function addPromoBoxes($list)
+    {
+        PromoPlacements::addBoxes($list);
     }
 
     /**
@@ -43,11 +62,16 @@ class FeinwerkDashboardSharing extends \Piwik\Plugin
     public function getJsFiles(&$jsFiles)
     {
         $jsFiles[] = 'plugins/FeinwerkDashboardSharing/javascripts/dashboardSharing.js';
+        // the feedback question at the end of the share dialog (templates/_feedback.twig)
+        $jsFiles[] = 'plugins/FeinwerkDashboardSharing/javascripts/feedback.js';
+        // the Feinwerk promotion kit: tip line, admin home banner, context boxes (templates/_promo*.twig)
+        $jsFiles[] = 'plugins/FeinwerkDashboardSharing/javascripts/promo.js';
     }
 
     public function getStylesheetFiles(&$stylesheets)
     {
         $stylesheets[] = 'plugins/FeinwerkDashboardSharing/stylesheets/dashboardSharing.less';
+        $stylesheets[] = 'plugins/FeinwerkDashboardSharing/stylesheets/promo.css';
     }
 
     public function getClientSideTranslationKeys(&$keys)
@@ -102,10 +126,14 @@ class FeinwerkDashboardSharing extends \Piwik\Plugin
     public function uninstall()
     {
         (new Dao\Sharing())->uninstall();
+        // the feedback throttles of all users and the server's vote counter ("_" is a LIKE wildcard)
+        Option::deleteLike(str_replace('_', '\\_', PluginFeedback::THROTTLE_OPTION_PREFIX) . '%');
     }
 
     public function deleteUser($userLogin)
     {
         (new Dao\Sharing())->deleteAllForUser($userLogin);
+        // the user's feedback throttles (time of the last vote per question; "_" is a LIKE wildcard)
+        Option::deleteLike(str_replace('_', '\\_', PluginFeedback::userOptionPrefix((string) $userLogin)) . '%');
     }
 }

@@ -1,5 +1,18 @@
 # Changelog
 
+## 5.0.0
+
+- At the end of the share dialog you can now tell us whether dashboard sharing is helpful for you, and open the
+  Feinwerk support form. Your Matomo server sends only your answer with the plugin and Matomo version, the browser
+  family and the language of Matomo, nothing about you, your websites or your visitors. `feedback = 0` in the section
+  `[FeinwerkDashboardSharing]` of `config/config.ini.php` switches the question off.
+- Tips from Feinwerk: admins and super users see short notes on other Feinwerk offers, one line at the end of the share
+  dialog, one banner on the start page of Matomo's administration and one box at the end of the Campaigns, Ecommerce
+  overview and Goals overview reports. Nothing is loaded from outside, "×" hides a tip for 30 days, and
+  `promotions = 0` in `[FeinwerkDashboardSharing]` (or in `[FeinwerkMarketplaceConnector]` for all Feinwerk plugins)
+  switches them off. Shared dashboards never show them.
+- Version numbers now follow Matomo: 5.x for Matomo 5 (this release follows 1.0.4), 6.x for Matomo 6.
+
 ## 1.0.4
 
 - Shared dashboards are now offered only to users who can see at least one of the owner's websites, also when they
@@ -9,7 +22,7 @@
 - The option for sharing with everyone now says who that is: all users who can see one of your websites.
 - A subscribed copy no longer takes over widget settings that would change the website, period or segment of a widget,
   or the account it is loaded with. Matomo already refused data of websites the subscriber cannot access; now such
-  settings are not copied at all. The metrics picked for a graph and, with FeinwerkDashboardSegment, the segments and
+  settings are not copied at all. The metrics picked for a graph and, with Feinwerk Dashboard Segment, the segments and
   time ranges of single widgets are still carried over.
 - Share names are limited to 100 characters, the length Matomo allows for dashboard names. Before, subscribing to a
   share with a longer name could fail.
@@ -31,7 +44,7 @@
 - The "Share" button is easier to read in dark mode.
 - Goal pages and other reports are no longer mistaken for a subscribed dashboard with the same number. Before, opening
   such a page could update your copy of the shared dashboard in the background.
-- Together with FeinwerkDashboardSegment 0.7.1 or later, the owner's changed segments and time ranges of a widget show on
+- Together with Feinwerk Dashboard Segment 0.7.1 or later, the owner's changed segments and time ranges of a widget show on
   the first opening of a subscribed dashboard.
 
 ## 1.0.2
@@ -50,6 +63,6 @@ This version is for Matomo 5. Matomo 6 support comes with the next major version
 
 ## 1.0.0
 
-Initial standalone release. Dashboard sharing, extracted from FeinwerkDashboardSegment: share a
+Initial standalone release. Dashboard sharing, extracted from Feinwerk Dashboard Segment: share a
 dashboard with specific users or everyone; recipients get an auto-synced, read-only copy.
-Optionally carries per-widget segments when FeinwerkDashboardSegment is installed.
+Optionally carries per-widget segments when Feinwerk Dashboard Segment is installed.

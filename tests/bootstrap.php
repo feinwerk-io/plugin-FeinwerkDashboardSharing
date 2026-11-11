@@ -19,6 +19,10 @@ if (!defined('PIWIK_INCLUDE_PATH')) {
     define('PIWIK_INCLUDE_PATH', $matomoPath);
 }
 date_default_timezone_set('UTC');
+// Like Matomo's own test runs: the feedback kit never sends a vote with Matomo's real HTTP client in test mode.
+if (!defined('PIWIK_TEST_MODE')) {
+    define('PIWIK_TEST_MODE', true);
+}
 
 // Our autoloader first: Matomo's maps Piwik\Plugins\ to its own plugins/ directory (maybe another copy of this plugin).
 require __DIR__ . '/../vendor/autoload.php';

@@ -1,0 +1,111 @@
+/*
+ * Feinwerk promotion kit (docs/promo-kit.md): tip line, admin home banner and context boxes. Identical in every Feinwerk
+ * plugin. Colours are Matomo's CSS custom properties with light fallbacks: compiles on Matomo 5.0 to 6.x (no Matomo LESS
+ * variables or mixins) and follows dark mode where Matomo has one (5.12+).
+ */
+
+/* shown once javascripts/promo.js has checked the 30-day dismissal and the one-per-page rule, so nothing flashes */
+.fwpromo-line:not([data-fwpromo-ready]),
+.fwpromo-box:not([data-fwpromo-ready]) {
+    display: none;
+}
+
+/* --- Tip line under the plugin's own report --- */
+.fwpromo-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 6px;
+    margin: 4px 0 8px;
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: var(--theme-color-text-lighter, #646464);
+}
+
+.fwpromo-line__label,
+.fwpromo-line__title {
+    color: var(--theme-color-text-light, #444);
+}
+
+.fwpromo-line__link,
+.fwpromo-box__link {
+    color: var(--theme-color-link, #1976d2);
+    text-decoration: underline;
+}
+
+.fwpromo-line__dismiss,
+.fwpromo-box__dismiss {
+    margin: 0 0 0 auto;
+    padding: 0 4px;
+    border: 0;
+    background: transparent;
+    color: var(--theme-color-text-lighter, #646464);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.fwpromo-line__dismiss:hover,
+.fwpromo-line__dismiss:focus-visible,
+.fwpromo-box__dismiss:hover,
+.fwpromo-box__dismiss:focus-visible {
+    color: var(--theme-color-text, #212121);
+}
+
+.fwpromo-line__dismiss:focus-visible,
+.fwpromo-box__dismiss:focus-visible {
+    outline: 2px solid var(--theme-color-focus-ring, #0969da);
+    outline-offset: 2px;
+}
+
+/* --- Banner on Matomo's admin home and context box at the end of Matomo's report pages --- */
+.fwpromo-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin: 0 0 20px;
+    padding: 12px 14px 12px 16px;
+    background: var(--theme-color-widget-background, #fff);
+    border: 1px solid var(--theme-color-widget-border, #e0e0e0);
+    border-left: 4px solid var(--theme-color-brand, #43a047);
+    border-radius: 4px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--theme-color-text, #212121);
+}
+
+.fwpromo-box--banner {
+    margin-top: 10px;
+}
+
+.fwpromo-box__body {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.fwpromo-box p.fwpromo-box__label,
+.fwpromo-box p.fwpromo-box__title,
+.fwpromo-box p.fwpromo-box__text {
+    margin: 0 0 4px;
+    padding: 0;
+}
+
+.fwpromo-box p.fwpromo-box__label {
+    font-size: 12px;
+    color: var(--theme-color-text-lighter, #646464);
+}
+
+.fwpromo-box p.fwpromo-box__title {
+    font-weight: bold;
+    color: var(--theme-color-text, #212121);
+}
+
+.fwpromo-box p.fwpromo-box__text {
+    margin-bottom: 6px;
+    color: var(--theme-color-text-light, #444);
+}
+
+.fwpromo-box__dismiss {
+    margin: 0;
+    font-size: 18px;
+}

@@ -12,6 +12,7 @@ namespace Piwik\Plugins\FeinwerkDashboardSharing;
 use Piwik\Common;
 use Piwik\DataTable\Renderer\Json;
 use Piwik\Piwik;
+use Piwik\Plugins\FeinwerkDashboardSharing\Promo\PromoPlacements;
 
 class Controller extends \Piwik\Plugin\Controller
 {
@@ -110,5 +111,23 @@ class Controller extends \Piwik\Plugin\Controller
         Common::sendHeader('Cache-Control: no-store, no-cache, must-revalidate');
         Json::sendHeaderJSON();
         return json_encode(API::getInstance()->getMyLinkedDashboards());
+    }
+
+    /**
+     * The end of the share dialog: the feedback question and, for admins and super users, the tip line (DialogNotes).
+     * HTML; empty for anonymous users.
+     */
+    public function dialogNotes()
+    {
+        Piwik::checkUserIsNotAnonymous();
+        Common::sendHeader('Cache-Control: no-store, no-cache, must-revalidate');
+
+        return DialogNotes::html(Common::getRequestVar('idSite', 0, 'int'));
+    }
+
+    /** The context box of the Feinwerk promotion kit on Matomo's report pages (Promo\PromoPlacements::addBoxes()). */
+    public function promoBox()
+    {
+        return PromoPlacements::box(Common::getRequestVar(PromoPlacements::BOX_PARAMETER, '', 'string'));
     }
 }

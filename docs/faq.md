@@ -20,11 +20,15 @@ Subscribers keep the last version they received, but it is no longer synchronise
 
 __Does it work with per-widget segments?__
 
-Yes, together with FeinwerkDashboardSegment: subscribers then also get the segment and time range of each widget. FeinwerkDashboardSharing works on its own as well.
+Yes, together with Feinwerk Dashboard Segment: subscribers then also get the segment and time range of each widget. Feinwerk Dashboard Sharing works on its own as well.
 
 __Does the plugin change Matomo?__
 
 No. It modifies neither Matomo core nor the bundled Dashboard plugin and keeps shares and subscriptions in tables of its own.
+
+__What are the feedback question and the tips from Feinwerk?__
+
+At the end of the share dialog you can tell us with thumbs up or down whether dashboard sharing is helpful for you; your Matomo server sends only the answer with the plugin and Matomo version, the browser and the interface language. Admins and super users also see short tips on other Feinwerk offers there, on the start page of the administration and at the end of the Campaigns, Ecommerce overview and Goals overview reports, never on the dashboards themselves. Nothing is loaded from outside. `feedback = 0` and `promotions = 0` in the section `[FeinwerkDashboardSharing]` of `config/config.ini.php` switch them off.
 
 __Where do I get help?__
 

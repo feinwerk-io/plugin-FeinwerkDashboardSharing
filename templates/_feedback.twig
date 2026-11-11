@@ -1,0 +1,31 @@
+{# Feedback question at the end of the share dialog (Feinwerk feedback kit): question with thumbs, thanks, privacy line,
+   support link. feedback = FeedbackBar::variables() {topic, question, enabled, supportUrl, version};
+   the behaviour is in javascripts/feedback.js (the vote goes through the API method sendFeedback, the Matomo server
+   sends it, never the browser). #}
+<div class="fwsh-feedback" data-topic="{{ feedback.topic }}"
+     data-version="{{ feedback.version }}"
+     data-thanks-up="{{ 'FeinwerkDashboardSharing_FeedbackThanks'|translate }}"
+     data-thanks-down="{{ 'FeinwerkDashboardSharing_FeedbackThanksDown'|translate }}">
+    <div class="fwsh-feedback__row">
+        {% if feedback.enabled %}
+            <span class="fwsh-feedback__question">{{ feedback.question }}</span>
+            {% for vote in ['up', 'down'] %}
+                {% set label = (vote == 'up' ? 'FeinwerkDashboardSharing_FeedbackYes' : 'FeinwerkDashboardSharing_FeedbackNo')|translate %}
+                <button type="button" class="fwsh-feedback__thumb" data-vote="{{ vote }}" title="{{ label }}"
+                        aria-label="{{ label }}" aria-pressed="false">
+                    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"
+                         class="fwsh-feedback__icon--{{ vote }}">
+                        <path d="M3 10h4v10H3zM7 10l4-7c1.3 0 2.2 1.1 2 2.4L12.4 9H19a2 2 0 0 1 2 2.3l-1.2 7A2 2 0 0 1 17.8 20H7"/>
+                    </svg>
+                </button>
+            {% endfor %}
+        {% endif %}
+        <a class="btn btn-outline btn-small fwsh-feedback__support" href="{{ feedback.supportUrl }}" target="_blank"
+           rel="noopener noreferrer" title="{{ 'FeinwerkDashboardSharing_SupportTitle'|translate }}"><span class="icon-help" aria-hidden="true"></span> {{ 'FeinwerkDashboardSharing_Support'|translate }}</a>
+    </div>
+    {% if feedback.enabled %}
+        {# div, not p: Matomo styles #content p with an id selector (colour and size of body text) #}
+        <div class="fwsh-feedback__thanks" role="status"></div>
+        <div class="fwsh-feedback__privacy">{{ 'FeinwerkDashboardSharing_FeedbackPrivacy'|translate }}</div>
+    {% endif %}
+</div>

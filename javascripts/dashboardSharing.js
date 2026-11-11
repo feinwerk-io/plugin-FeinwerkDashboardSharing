@@ -219,6 +219,29 @@
         var $myShares = window.$('<div class="fwsh-myShares"></div>');
         $body.append($myShares);
         renderMyShares($myShares);
+
+        loadDialogNotes($body);
+    }
+
+    // The end of the share dialog: the feedback question and, for admins, the tip line from Feinwerk (controller action
+    // dialogNotes, DialogNotes.php; behaviour in javascripts/feedback.js and javascripts/promo.js). Optional: a failed
+    // request leaves the dialog as it is, without an error message, and a dialog closed in the meantime gets nothing.
+    function loadDialogNotes($body) {
+        var $notes = window.$('<div class="fwsh-dialogNotes"></div>');
+        $body.append($notes);
+        try {
+            var ajax = new window.ajaxHelper();
+            ajax.addParams({ module: 'FeinwerkDashboardSharing', action: 'dialogNotes' }, 'get');
+            ajax.setFormat('html');
+            if (typeof ajax.setErrorCallback === 'function') { ajax.setErrorCallback(function () {}); }
+            ajax.send().then(function (html) {
+                if (typeof html === 'string' && html.indexOf('fwsh-notes') !== -1 && document.body.contains($notes[0])) {
+                    $notes.html(html);
+                }
+            }, function () {});
+        } catch (e) {
+            // the dialog works without the notes
+        }
     }
 
     function openAvailablePanel() {

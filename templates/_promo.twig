@@ -1,0 +1,11 @@
+{# Tip line of the Feinwerk promotion kit (docs/promo-kit.md): under the plugin's own report, after the feedback question.
+   promo = PromoLine::variables() {id, placement, title, text, link, url, dismissDays}; hiding for 30 days and once per
+   page in javascripts/promo.js. #}
+<div class="fwpromo-line" data-fwpromo-id="{{ promo.id }}" data-fwpromo-placement="line" data-fwpromo-days="{{ promo.dismissDays }}">
+    <span class="fwpromo-line__label">{{ 'FeinwerkDashboardSharing_PromoTip'|translate }}</span>
+    <strong class="fwpromo-line__title">{{ promo.title }}</strong>
+    <span class="fwpromo-line__text">{{ promo.text }}</span>
+    <a class="fwpromo-line__link" href="{{ promo.url }}" target="_blank" rel="noopener">{{ promo.link }}</a>
+    <button type="button" class="fwpromo-line__dismiss fwpromo-dismiss" title="{{ 'FeinwerkDashboardSharing_PromoDismiss'|translate }}"
+            aria-label="{{ 'FeinwerkDashboardSharing_PromoDismiss'|translate }}"><span aria-hidden="true">&times;</span></button>
+</div>
