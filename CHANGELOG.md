@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.0.1
+
+- The feedback question in the share dialog and the tips from Feinwerk (in the share dialog, on the start page of the
+  administration and at the end of the Campaigns, Ecommerce overview and Goals overview reports) are removed again. The
+  plugin shows no notes on other Feinwerk offers.
+
 ## 5.0.0
 
 - At the end of the share dialog you can now tell us whether dashboard sharing is helpful for you, and open the

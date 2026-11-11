@@ -13,10 +13,6 @@ var triggered = [];
 var classes = {};
 var texts = [];   // every text set through $(...).text(value)
 var failing = {}; // action -> true: that request fails (Matomo 6 answers errors with HTTP 400/500)
-var htmlSet = []; // every HTML set through $(...).html(value)
-var notesRequests = 0;
-var notesHtml = '<div class="fwsh-notes"><div class="fwsh-feedback"></div></div>'; // answer of the action dialogNotes
-var dialogOpen = true; // whether the dialog's elements are still in the document
 function jq() {
     var o = function () { return o; };
     var methods = ['find', 'first', 'each', 'on', 'one', 'attr', 'append', 'prepend', 'after',
@@ -32,7 +28,6 @@ function jq() {
     o.removeClass = function (c) { delete classes[c]; return o; };
     o.trigger = function (name) { triggered.push(name); return o; };
     o.text = function (t) { if (t !== undefined) { texts.push(t); } return o; };
-    o.html = function (h) { if (h !== undefined) { htmlSet.push(h); } return o; };
     return o;
 }
 var $ = function (arg) { if (typeof arg === 'function') { arg(); return; } return jq(); };
@@ -52,11 +47,9 @@ window.ajaxHelper = function () {
     var action = null;
     return {
         addParams: function (p) { if (p && p.action) { action = p.action; } },
-        withTokenInUrl: function () {}, setFormat: function () {}, setErrorCallback: function () {},
+        withTokenInUrl: function () {}, setFormat: function () {},
         send: function () {
-            if (action === 'dialogNotes') { notesRequests++; }
             if (failing[action]) { return Promise.reject({ status: 400 }); }
-            if (action === 'dialogNotes') { return Promise.resolve(notesHtml); }
             if (action === 'getLinkInfo') { linkInfoCalls++; return Promise.resolve({ linked: true, owner: 'bob' }); }
             if (action === 'syncLinkedDashboard') { syncCalls++; return Promise.resolve({ synced: true }); }
             return Promise.resolve([]);
@@ -69,8 +62,7 @@ window.clearTimeout = function (t) { return clearTimeout(t); };
 window.MutationObserver = function () { return { observe: function () {} }; };
 global.document = {
     createTextNode: function () { return {}; },
-    getElementById: function () { return {}; },
-    body: { contains: function () { return dialogOpen; } }
+    getElementById: function () { return {}; }
 };
 
 function assert(cond, msg) { if (!cond) { throw new Error('ASSERT FAILED: ' + msg); } }
@@ -130,17 +122,14 @@ setTimeout(function () {
 
     // A failed list request (share dialog: users + my shares, import panel: available shares) must show the error
     // hint instead of ending in an unhandled promise rejection (process handler above exits 1).
-    failing = { getShareableUsers: true, getMyShares: true, getAvailableShares: true, dialogNotes: true };
+    failing = { getShareableUsers: true, getMyShares: true, getAvailableShares: true };
     texts.length = 0;
-    htmlSet.length = 0;
     assert(typeof FS.openShareDialog === 'function' && typeof FS.openAvailablePanel === 'function', 'dialogs published');
     FS.openShareDialog();
     FS.openAvailablePanel();
     setTimeout(function () {
         var hints = texts.filter(function (t) { return t === 'FeinwerkDashboardSharing_ShareError'; }).length;
         assert(hints === 3, 'each failed list load shows the error hint: ' + hints);
-        assert(notesRequests === 1, 'the share dialog asks for its notes once, the import panel not at all: ' + notesRequests);
-        assert(htmlSet.length === 0, 'failed notes: nothing inserted, no error hint');
         console.log('SMOKE OK: failed list loads show the error hint, no unhandled rejection');
         failing = {};
 
@@ -163,32 +152,7 @@ setTimeout(function () {
                 assert(linkInfoCalls === linkBefore + 1, 'dashboard 1: getLinkInfo asked once');
                 assert(FS.readOnly === true && classes['fwsh-readonly'] === true, 'dashboard 1 is still recognised as a linked copy');
                 console.log('SMOKE OK: dashboard pages unchanged');
-                checkDialogNotes();
             }, 60);
         }, 60);
     }, 60);
 }, 60);
-
-// The end of the share dialog: feedback question and tip line, loaded as HTML (action dialogNotes). Inserted only when
-// the answer is the notes block and the dialog is still open.
-function checkDialogNotes() {
-    htmlSet.length = 0;
-    FS.openShareDialog();
-    setTimeout(function () {
-        assert(htmlSet.length === 1 && htmlSet[0].indexOf('fwsh-feedback') !== -1, 'notes inserted: ' + JSON.stringify(htmlSet));
-        htmlSet.length = 0;
-        notesHtml = '<p>Matomo error page</p>';
-        FS.openShareDialog();
-        setTimeout(function () {
-            assert(htmlSet.length === 0, 'an answer without the notes block is not inserted: ' + JSON.stringify(htmlSet));
-            notesHtml = '<div class="fwsh-notes">late</div>';
-            FS.openShareDialog();
-            dialogOpen = false; // closed before the answer arrives
-            setTimeout(function () {
-                assert(htmlSet.length === 0, 'a dialog closed in the meantime gets nothing: ' + JSON.stringify(htmlSet));
-                dialogOpen = true;
-                console.log('SMOKE OK: dialog notes inserted; an error page and a closed dialog get nothing');
-            }, 60);
-        }, 60);
-    }, 60);
-}

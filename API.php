@@ -9,16 +9,10 @@
 
 namespace Piwik\Plugins\FeinwerkDashboardSharing;
 
-use Piwik\Container\StaticContainer;
 use Piwik\Piwik;
-use Piwik\Plugin\Manager as PluginManager;
 use Piwik\Plugins\Dashboard\Model as DashboardModel;
 use Piwik\Plugins\UsersManager\API as UsersManagerAPI;
 use Piwik\Plugins\FeinwerkDashboardSharing\Dao\Sharing;
-use Piwik\Plugins\FeinwerkDashboardSharing\Feedback\FeedbackVotes;
-use Piwik\Plugins\FeinwerkDashboardSharing\Feedback\PluginFeedback;
-use Piwik\Translation\Translator;
-use Piwik\Version;
 
 /**
  * FeinwerkDashboardSharing API: sharing of dashboards as auto-synced subscriptions.
@@ -218,69 +212,6 @@ class API extends \Piwik\Plugin\API
             }
         }
         return $result;
-    }
-
-    /**
-     * The answer to the feedback question at the end of the share dialog (templates/_feedback.twig). The Matomo server
-     * sends it to Feinwerk (FeinwerkEmailReportsPro/docs/feedback-kit.md): plugin and Matomo version, question, vote,
-     * browser family and interface language, nothing about the user, the website or its visitors. Nothing is sent with
-     * feedback = 0 in [FeinwerkDashboardSharing] or with Matomo's internet features off; one vote per user and question
-     * every 10 seconds. Store errors never reach the user.
-     *
-     * @param string $topic the question, see PluginFeedback::TOPICS
-     * @param string $vote up or down
-     * @return array{sent: bool} whether the store accepted the vote
-     */
-    public function sendFeedback(string $topic, string $vote): array
-    {
-        $login = $this->checkAndGetLogin();
-        if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? '')) !== 'POST') {
-            throw new \Exception('FeinwerkDashboardSharing.sendFeedback only accepts POST requests.');
-        }
-        try {
-            $payload = PluginFeedback::payload(
-                $topic,
-                $vote,
-                $this->pluginVersion(),
-                Version::VERSION,
-                (string) ($_SERVER['HTTP_USER_AGENT'] ?? ''),
-                $this->interfaceLanguage()
-            );
-        } catch (\InvalidArgumentException $e) {
-            throw new \InvalidArgumentException($this->translate('FeinwerkDashboardSharing_ErrorFeedback'));
-        }
-
-        return ['sent' => $this->feedbackVotes()->cast($login, $payload, $this->feedbackEnabled())];
-    }
-
-    /** Test seam: the switches feedback = 0, Matomo's internet features and its test mode (PluginFeedback::enabled()). */
-    protected function feedbackEnabled(): bool
-    {
-        return PluginFeedback::enabled();
-    }
-
-    /** Test seam: the installed version of this plugin. */
-    protected function pluginVersion(): string
-    {
-        return (string) PluginManager::getInstance()->getLoadedPlugin(PluginFeedback::PLUGIN)->getVersion();
-    }
-
-    /** Test seam: the language of the user's interface. */
-    protected function interfaceLanguage(): string
-    {
-        return (string) StaticContainer::get(Translator::class)->getCurrentLanguage();
-    }
-
-    /** Test seam: Matomo's translation. */
-    protected function translate(string $key): string
-    {
-        return Piwik::translate($key);
-    }
-
-    /** Test seam: the vote counter with Matomo's options and the real store. */
-    protected function feedbackVotes(): FeedbackVotes
-    {
-        return FeedbackVotes::create();
     }
 
     private function shareAccess(): ShareAccess

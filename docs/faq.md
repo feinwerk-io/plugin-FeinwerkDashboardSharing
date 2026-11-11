@@ -26,10 +26,6 @@ __Does the plugin change Matomo?__
 
 No. It modifies neither Matomo core nor the bundled Dashboard plugin and keeps shares and subscriptions in tables of its own.
 
-__What are the feedback question and the tips from Feinwerk?__
-
-At the end of the share dialog you can tell us with thumbs up or down whether dashboard sharing is helpful for you; your Matomo server sends only the answer with the plugin and Matomo version, the browser and the interface language. Admins and super users also see short tips on other Feinwerk offers there, on the start page of the administration and at the end of the Campaigns, Ecommerce overview and Goals overview reports, never on the dashboards themselves. Nothing is loaded from outside. `feedback = 0` and `promotions = 0` in the section `[FeinwerkDashboardSharing]` of `config/config.ini.php` switch them off.
-
 __Where do I get help?__
 
 Documentation: https://plugins.feinwerk.io/en/docs/plugins/FeinwerkDashboardSharing. Support: support@feinwerk.io.
