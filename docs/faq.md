@@ -26,6 +26,10 @@ __Does the plugin change Matomo?__
 
 No. It modifies neither Matomo core nor the bundled Dashboard plugin and keeps shares and subscriptions in tables of its own.
 
+__Where do I find more Feinwerk plugins?__
+
+Install Feinwerk Connector from the Matomo Marketplace. It lists all Plugins for Matomo by Feinwerk, free and paid, and installs and updates them with one click.
+
 __Where do I get help?__
 
 Documentation: https://plugins.feinwerk.io/en/docs/plugins/FeinwerkDashboardSharing. Support: support@feinwerk.io.

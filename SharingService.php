@@ -12,6 +12,7 @@ namespace Piwik\Plugins\FeinwerkDashboardSharing;
 use Piwik\Db;
 use Piwik\Plugins\Dashboard\Model as DashboardModel;
 use Piwik\Plugins\FeinwerkDashboardSharing\Dao\Sharing;
+use Piwik\Plugins\FeinwerkDashboardSharing\Exception\NotFoundException;
 
 /**
  * Subscribe/sync logic for shared dashboards. A subscription is a real dashboard owned by the
@@ -42,7 +43,7 @@ class SharingService
     {
         $share = $this->sharing->getShare($idShare);
         if (!$share) {
-            throw new \Exception('Share not found');
+            throw new NotFoundException('Share not found');
         }
 
         // Idempotent: a double-click, retry or direct request must not create a second copy of the
@@ -54,7 +55,7 @@ class SharingService
 
         $layout = $this->ownerLayout($share['owner_login'], $share['iddashboard']);
         if ($layout === false) {
-            throw new \Exception('Source dashboard not found');
+            throw new NotFoundException('Source dashboard not found');
         }
 
         // Dashboard, overrides and link must appear together or not at all.

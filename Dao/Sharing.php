@@ -12,6 +12,7 @@ namespace Piwik\Plugins\FeinwerkDashboardSharing\Dao;
 use Piwik\Common;
 use Piwik\Db;
 use Piwik\DbHelper;
+use Piwik\Plugins\FeinwerkDashboardSharing\Exception\LinkedForAnotherUserException;
 use Piwik\Plugins\FeinwerkDashboardSharing\LoginMatch;
 use Piwik\Plugins\UsersManager\Model as UsersModel;
 
@@ -20,11 +21,20 @@ use Piwik\Plugins\UsersManager\Model as UsersModel;
  * users — either by everyone (share_to_all) or by a list of target logins. Importing creates an
  * independent copy for the recipient (handled elsewhere); this Dao only tracks availability.
  *
- * Every row found by a login is checked again with an exact comparison (LoginMatch) before it is used or changed: the
- * plugin's tables compare logins with their collation, which can treat two different Matomo users as one.
+ * The login columns have the binary collation of their character set (new installs, and the update for existing
+ * tables), so the database compares logins exactly. Every row found by a login is still checked again with an exact
+ * comparison (LoginMatch) before it is used or changed: until that update has run, a table may compare logins with a
+ * collation that treats two different Matomo users as one.
  */
 class Sharing
 {
+    /** table (without prefix) => its login column */
+    private const LOGIN_COLUMNS = array(
+        'shared_dashboard'        => 'owner_login',
+        'shared_dashboard_target' => 'target_login',
+        'shared_dashboard_link'   => 'subscriber_login',
+    );
+
     private $shareTable = 'shared_dashboard';
     private $targetTable = 'shared_dashboard_target';
     private $linkTable = 'shared_dashboard_link';
@@ -72,6 +82,44 @@ class Sharing
             `idshare` INT(10) UNSIGNED NOT NULL,
             PRIMARY KEY (`subscriber_login`, `iddashboard`),
             KEY `idshare` (`idshare`)");
+
+        // the tables' character set is the server's or Matomo's choice: give each login column its binary collation
+        foreach (self::LOGIN_COLUMNS as $table => $column) {
+            $type = $this->exactLoginColumnType($table, $column);
+            if ($type !== null) {
+                Db::exec(sprintf('ALTER TABLE `%s` MODIFY COLUMN `%s` %s', Common::prefixTable($table), $column, $type));
+            }
+        }
+    }
+
+    /** @return array<string,string> table (without prefix) => its login column */
+    public static function loginColumns()
+    {
+        return self::LOGIN_COLUMNS;
+    }
+
+    /**
+     * The column type that makes a login column compare exactly (the binary collation of the column's own character
+     * set), or null when the column already compares exactly or does not exist. install() and the update for existing
+     * tables both use it.
+     *
+     * @param string $table without prefix
+     */
+    public function exactLoginColumnType($table, $column)
+    {
+        $info = Db::fetchRow(
+            'SELECT `CHARACTER_SET_NAME` AS cs, `COLLATION_NAME` AS coll FROM `information_schema`.`COLUMNS`
+              WHERE `TABLE_SCHEMA` = DATABASE() AND `TABLE_NAME` = ? AND `COLUMN_NAME` = ?',
+            array(Common::prefixTable($table), $column)
+        );
+        if (empty($info) || empty($info['cs']) || substr((string) $info['coll'], -4) === '_bin') {
+            return null;
+        }
+        if (!preg_match('/^[a-z0-9]+$/', (string) $info['cs'])) {
+            return null;
+        }
+
+        return sprintf('VARCHAR(100) CHARACTER SET %1$s COLLATE %1$s_bin NOT NULL', $info['cs']);
     }
 
     public function uninstall()
@@ -95,7 +143,7 @@ class Sharing
         );
         $own = LoginMatch::rowsOf($rows, 'subscriber_login', (string) $subscriberLogin);
         if (count($rows) !== count($own)) {
-            throw new \Exception('This dashboard is already linked for another user.');
+            throw new LinkedForAnotherUserException();
         }
         if ($own) {
             // the key matches exactly one row under the collation, and it is the user's own
@@ -249,14 +297,16 @@ class Sharing
     /**
      * Shares the given user may import: shared to everyone, or explicitly to them; never their own. The owner and the
      * targets are compared exactly; a target typed in another case still counts when Matomo resolves it to this user.
+     * Targets stay as the owner typed them (writing the resolved login would show a user's real login to an owner who
+     * may not list users), so the lookup also finds every case of the login and LoginMatch::targetIs() decides.
      */
     public function getSharesAvailableTo($login)
     {
         $login = (string) $login;
         $mine = array();
         $targets = Db::fetchAll(
-            sprintf('SELECT `idshare`, `target_login` FROM `%s` WHERE `target_login` = ?', $this->targetPrefixed),
-            array($login)
+            sprintf('SELECT `idshare`, `target_login` FROM `%s` WHERE ' . self::loginOrAnyCase('target_login'), $this->targetPrefixed),
+            array($login, $login)
         );
         foreach ($targets as $row) {
             if (LoginMatch::targetIs((string) $row['target_login'], $login, $this->canonicalLogin)) {
@@ -264,17 +314,11 @@ class Sharing
             }
         }
 
-        $shares = Db::fetchAll(
-            sprintf(
-                'SELECT s.* FROM `%s` s
-                 WHERE s.`share_to_all` = 1
-                    OR EXISTS (SELECT 1 FROM `%s` t WHERE t.`idshare` = s.`idshare` AND t.`target_login` = ?)
-                 ORDER BY s.`idshare` DESC',
-                $this->sharePrefixed,
-                $this->targetPrefixed
-            ),
-            array($login)
-        );
+        $where = 's.`share_to_all` = 1';
+        if ($mine) {
+            $where .= sprintf(' OR s.`idshare` IN (%s)', implode(',', array_keys($mine)));
+        }
+        $shares = Db::fetchAll(sprintf('SELECT s.* FROM `%s` s WHERE %s ORDER BY s.`idshare` DESC', $this->sharePrefixed, $where));
 
         return array_values(array_filter($shares, static function ($share) use ($login, $mine) {
             if (LoginMatch::isSame((string) $share['owner_login'], $login)) {
@@ -340,9 +384,9 @@ class Sharing
 
     /**
      * Remove shares owned by, target rows referencing, and subscriptions of a deleted user. $login is the login as the
-     * deletion named it (Matomo passes the caller's spelling, after the user row is gone). A row found by the table's
-     * collation goes when LoginMatch::goesWithDeletedUser() says it belongs to that user or to no user; rows of another
-     * existing user stay.
+     * deletion named it (Matomo passes the caller's spelling, after the user row is gone), so rows are looked up in
+     * every case of it. A row found that way goes when LoginMatch::goesWithDeletedUser() says it belongs to that user
+     * or to no user; rows of another existing user stay.
      */
     public function deleteAllForUser($login)
     {
@@ -361,8 +405,8 @@ class Sharing
         };
 
         $owned = Db::fetchAll(
-            sprintf('SELECT `idshare`, `owner_login` FROM `%s` WHERE `owner_login` = ?', $this->sharePrefixed),
-            array($login)
+            sprintf('SELECT `idshare`, `owner_login` FROM `%s` WHERE ' . self::loginOrAnyCase('owner_login'), $this->sharePrefixed),
+            array($login, $login)
         );
         foreach ($owned as $row) {
             if ($goes((string) $row['owner_login'])) {
@@ -370,44 +414,53 @@ class Sharing
             }
         }
 
-        // Under the table's collation each share has at most one target row and each dashboard at most one link row
-        // that matches this login (they are primary keys), so deleting by login plus the ids checked here removes
-        // exactly the rows that belong to this user.
         $targets = Db::fetchAll(
-            sprintf('SELECT `idshare`, `target_login` FROM `%s` WHERE `target_login` = ?', $this->targetPrefixed),
-            array($login)
+            sprintf('SELECT `idshare`, `target_login` FROM `%s` WHERE ' . self::loginOrAnyCase('target_login'), $this->targetPrefixed),
+            array($login, $login)
         );
-        $idShares = array();
-        foreach ($targets as $row) {
-            if ($goes((string) $row['target_login'])) {
-                $idShares[] = (int) $row['idshare'];
-            }
-        }
-        if ($idShares) {
-            Db::query(
-                sprintf('DELETE FROM `%s` WHERE `target_login` = ? AND `idshare` IN (%s)', $this->targetPrefixed,
-                    implode(',', array_fill(0, count($idShares), '?'))),
-                array_merge(array($login), $idShares)
-            );
-        }
+        $this->deleteByStoredLogin($this->targetPrefixed, 'target_login', 'idshare', array_filter($targets, static function ($row) use ($goes) {
+            return $goes((string) $row['target_login']);
+        }));
 
         $links = Db::fetchAll(
-            sprintf('SELECT `subscriber_login`, `iddashboard` FROM `%s` WHERE `subscriber_login` = ?', $this->linkPrefixed),
-            array($login)
+            sprintf('SELECT `subscriber_login`, `iddashboard` FROM `%s` WHERE ' . self::loginOrAnyCase('subscriber_login'), $this->linkPrefixed),
+            array($login, $login)
         );
-        $idDashboards = array();
-        foreach ($links as $row) {
-            if ($goes((string) $row['subscriber_login'])) {
-                $idDashboards[] = (int) $row['iddashboard'];
-            }
+        $this->deleteByStoredLogin($this->linkPrefixed, 'subscriber_login', 'iddashboard', array_filter($links, static function ($row) use ($goes) {
+            return $goes((string) $row['subscriber_login']);
+        }));
+    }
+
+    /**
+     * Delete the given rows, each by the login stored in it plus its id. The login and the id are the primary key, and
+     * under any collation a key matches at most one row (a table without the binary collation cannot hold two logins it
+     * compares as equal under one id), so exactly the given rows go.
+     *
+     * @param array<array<string,mixed>> $rows
+     */
+    private function deleteByStoredLogin($table, $loginColumn, $idColumn, array $rows)
+    {
+        $idsByLogin = array();
+        foreach ($rows as $row) {
+            $idsByLogin[(string) $row[$loginColumn]][] = (int) $row[$idColumn];
         }
-        if ($idDashboards) {
+        foreach ($idsByLogin as $stored => $ids) {
             Db::query(
-                sprintf('DELETE FROM `%s` WHERE `subscriber_login` = ? AND `iddashboard` IN (%s)', $this->linkPrefixed,
-                    implode(',', array_fill(0, count($idDashboards), '?'))),
-                array_merge(array($login), $idDashboards)
+                sprintf('DELETE FROM `%s` WHERE `%s` = ? AND `%s` IN (%s)', $table, $loginColumn, $idColumn,
+                    implode(',', array_fill(0, count($ids), '?'))),
+                array_merge(array((string) $stored), $ids)
             );
         }
+    }
+
+    /**
+     * A condition that finds a login in every case (bound twice): the login columns compare exactly once the update has
+     * given them the binary collation, while targets keep the case the owner typed and deletions name the login as the
+     * caller spelled it. LoginMatch decides which of the rows found belong to the user.
+     */
+    private static function loginOrAnyCase($column)
+    {
+        return sprintf('(`%1$s` = ? OR LOWER(`%1$s`) = LOWER(?))', $column);
     }
 
     /** The stored spelling of a Matomo user's login, or $login itself when Matomo knows no such user. */

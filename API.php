@@ -13,6 +13,8 @@ use Piwik\Piwik;
 use Piwik\Plugins\Dashboard\Model as DashboardModel;
 use Piwik\Plugins\UsersManager\API as UsersManagerAPI;
 use Piwik\Plugins\FeinwerkDashboardSharing\Dao\Sharing;
+use Piwik\Plugins\FeinwerkDashboardSharing\Exception\InvalidRequestException;
+use Piwik\Plugins\FeinwerkDashboardSharing\Exception\NotFoundException;
 
 /**
  * FeinwerkDashboardSharing API: sharing of dashboards as auto-synced subscriptions.
@@ -60,7 +62,7 @@ class API extends \Piwik\Plugin\API
             return is_scalar($target) ? trim((string) $target) : '';
         }, $targets), 'strlen');
         if (!$shareToAll && empty($targets)) {
-            throw new \Exception('A share needs at least one target user, or must be shared to all.');
+            throw new InvalidRequestException('A share needs at least one target user, or must be shared to all.');
         }
         // The name becomes the subscribers' dashboard name, which Matomo stores with at most 100 characters.
         $name = trim(mb_substr(trim($name), 0, SharingService::DASHBOARD_NAME_MAX_LENGTH));
@@ -143,7 +145,7 @@ class API extends \Piwik\Plugin\API
             }
         }
         if (!$available) {
-            throw new \Exception('Share not available');
+            throw new NotFoundException('Share not available');
         }
         return $this->sharingService->subscribe($idShare, $login);
     }
@@ -232,7 +234,7 @@ class API extends \Piwik\Plugin\API
     private function checkDashboardOwnedBy(string $login, int $idDashboard): void
     {
         if (!$this->dashboardExists($login, $idDashboard)) {
-            throw new \Exception('Dashboard not found');
+            throw new NotFoundException('Dashboard not found');
         }
     }
 

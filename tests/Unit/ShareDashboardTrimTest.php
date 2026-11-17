@@ -58,6 +58,7 @@ class ShareDashboardTrimTest extends TestCase
     public function test_targetArrayOfOnlySpaces_isRejectedLikeNoTarget()
     {
         $this->expectExceptionMessage('A share needs at least one target user');
+        $this->expectExceptionCode(400);
 
         $this->api()->shareDashboard(4, 'Team', array(' ', ''));
     }

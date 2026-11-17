@@ -23,6 +23,8 @@ use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
  */
 class SubscribeAtomicityTest extends IntegrationTestCase
 {
+    use TablesBeforeTheUpdate;
+
     /** @var string '' = observer idle, 'record' = capture state, 'throw' = simulate a failing observer */
     private $observerMode = '';
     /** @var int|null share the observer inspects */
@@ -69,11 +71,13 @@ class SubscribeAtomicityTest extends IntegrationTestCase
     }
 
     /**
-     * The new copy's key (subscriber, dashboard id) is held by another login that the table's collation treats as the
-     * same ("ALICE" for alice): the subscription is refused and rolled back, the other row stays as it was.
+     * Before the update to the binary login collation, the new copy's key (subscriber, dashboard id) may be held by
+     * another login that the table's collation treats as the same ("ALICE" for alice): the subscription is refused and
+     * rolled back, the other row stays as it was.
      */
     public function test_subscribe_refusesAKeyOfAnotherLogin_andRollsBack()
     {
+        $this->giveTheTablesACaseInsensitiveCollation();
         $sharing = new Sharing();
         $bobDash = (int) (new DashboardModel())->createNewDashboardForUser('bob', 'Bob dashboard', '{}');
         $this->idShare = (int) $sharing->createShare('bob', $bobDash, 'Shared', true, array(), '2026-10-13 10:00:00');
@@ -95,6 +99,7 @@ class SubscribeAtomicityTest extends IntegrationTestCase
         }
         $this->assertNotNull($refused, 'the key (alice, 2) belongs to ALICE (the copy gets id 2 after the stored default)');
         $this->assertStringContainsString('another user', $refused->getMessage());
+        $this->assertSame(409, $refused->getCode());
 
         $this->assertSame(array(), (new DashboardModel())->getAllDashboardsForUser('alice'), 'rolled back, no orphan dashboard');
         $this->assertSame($other, (int) $sharing->getLink('ALICE', 2)['idshare'], 'ALICE\'s subscription is unchanged');

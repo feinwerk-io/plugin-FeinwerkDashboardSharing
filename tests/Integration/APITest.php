@@ -59,9 +59,27 @@ class APITest extends IntegrationTestCase
                 $this->fail('a share of an owner without a common website must not be subscribable');
             } catch (\Exception $e) {
                 $this->assertSame('Share not available', $e->getMessage());
+                $this->assertSame(404, $e->getCode(), 'the same answer as for a share that does not exist');
             }
         }
         $this->assertSame([], $dashboards->getAllDashboardsForUser('alice'));
+    }
+
+    public function test_sharingADashboardOfAnotherUser_isNotFound()
+    {
+        $bobsDashboard = (int) (new DashboardModel())->createNewDashboardForUser('bob', 'B', '{}');
+        // alice has no dashboard with that id
+        $refused = null;
+        try {
+            $this->api->shareDashboard($bobsDashboard, 'Not mine', '', true);
+        } catch (\Exception $e) {
+            $refused = $e;
+        }
+
+        $this->assertNotNull($refused);
+        $this->assertSame('Dashboard not found', $refused->getMessage());
+        $this->assertSame(404, $refused->getCode());
+        $this->assertSame([], (new Sharing())->getSharesByOwner('alice'));
     }
 
     public function test_superUser_seesSharesOfEveryOwner()

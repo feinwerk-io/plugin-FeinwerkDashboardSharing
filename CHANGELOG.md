@@ -1,5 +1,14 @@
 # Changelog
 
+## 5.1.0
+
+- The plugin's API now answers errors with a fitting HTTP status instead of 200: 400 for invalid input, 404 for a
+  dashboard or share that does not exist or is not offered to you. Scripts that call the API can rely on the status.
+- The database now tells logins apart that differ only in case: the update changes the login columns of the plugin's
+  three tables so that "Anna" and "anna" are two users there too. It changes no data; a share for a login typed in
+  another case ("Bob" for bob) still reaches that user.
+- The demo link in the Matomo Marketplace works again.
+
 ## 5.0.2
 
 - Security: shares and subscriptions are now kept strictly apart for users whose logins the database treats as the same

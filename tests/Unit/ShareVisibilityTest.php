@@ -39,6 +39,7 @@ class ShareVisibilityTest extends TestCase
         $api = $this->api();
         $this->service->expects($this->never())->method('subscribe');
         $this->expectExceptionMessage('Share not available');
+        $this->expectExceptionCode(404);
 
         $api->subscribeToShare(2);
     }

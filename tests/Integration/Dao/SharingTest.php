@@ -12,6 +12,7 @@ namespace Piwik\Plugins\FeinwerkDashboardSharing\tests\Integration\Dao;
 use Piwik\Common;
 use Piwik\Db;
 use Piwik\Plugins\FeinwerkDashboardSharing\Dao\Sharing;
+use Piwik\Plugins\FeinwerkDashboardSharing\tests\Integration\TablesBeforeTheUpdate;
 use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
 
 /**
@@ -19,6 +20,8 @@ use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
  */
 class SharingTest extends IntegrationTestCase
 {
+    use TablesBeforeTheUpdate;
+
     /** @var Sharing */
     private $dao;
 
@@ -92,9 +95,9 @@ class SharingTest extends IntegrationTestCase
     }
 
     /**
-     * "Anna" and "anna" as two different Matomo users that the plugin's tables cannot tell apart: Matomo's user table
-     * may use another collation than the plugin's tables. The case-insensitive collation of the test database stands in
-     * for every collation that treats two logins as equal.
+     * "Anna" and "anna" as two different Matomo users. Before the update the plugin's tables may not tell them apart
+     * (Matomo's user table may use another collation than the plugin's tables; a case-insensitive collation stands in
+     * for every collation that treats two logins as equal); after it they compare exactly.
      */
     private function daoWithTwoUsers(): Sharing
     {
@@ -103,22 +106,93 @@ class SharingTest extends IntegrationTestCase
         });
     }
 
-    private function skipUnlessTheTablesIgnoreCase(): void
+    /** The two states a customer's tables can be in: before the update to the binary login collation, and after it. */
+    public function tableStates(): array
     {
-        $id = $this->dao->createShare('Anna', 1, 'probe', true, [], '2026-06-16 10:00:00');
-        $same = (int) Db::fetchOne(
-            sprintf('SELECT COUNT(*) FROM `%s` WHERE `owner_login` = ?', Common::prefixTable('shared_dashboard')),
-            ['anna']
-        );
-        $this->dao->deleteShare($id);
-        if ($same === 0) {
-            $this->markTestSkipped('the test database compares logins case-sensitively');
+        return ['before the update' => [true], 'after the update' => [false]];
+    }
+
+    private function tablesAsIn(bool $beforeTheUpdate): void
+    {
+        if ($beforeTheUpdate) {
+            $this->giveTheTablesACaseInsensitiveCollation();
         }
     }
 
-    public function test_aSubscriptionOfAnotherLogin_isNeitherReadNorOverwritten()
+    public function test_install_givesEveryLoginColumnTheBinaryCollation()
     {
-        $this->skipUnlessTheTablesIgnoreCase();
+        foreach (Sharing::loginColumns() as $table => $column) {
+            $this->assertNull($this->dao->exactLoginColumnType($table, $column), "$table.$column: nothing left for the update");
+            $collation = (string) Db::fetchOne(
+                'SELECT `COLLATION_NAME` FROM `information_schema`.`COLUMNS`
+                  WHERE `TABLE_SCHEMA` = DATABASE() AND `TABLE_NAME` = ? AND `COLUMN_NAME` = ?',
+                [Common::prefixTable($table), $column]
+            );
+            $this->assertStringEndsWith('_bin', $collation, "$table.$column");
+        }
+    }
+
+    public function test_theUpdate_givesExistingTablesTheBinaryCollation_once_andKeepsEveryRow()
+    {
+        $this->giveTheTablesACaseInsensitiveCollation();
+        $dao = $this->daoWithTwoUsers();
+        $id = $dao->createShare('alice', 5, 'for Anna', false, ['ANNA', 'bob'], '2026-06-16 10:00:00');
+        $dao->createLink('Anna', 3, $id);
+
+        $update = $this->loginCollationUpdate();
+        $updater = $this->createMock(\Piwik\Updater::class);
+        $migrations = $update->getMigrations($updater);
+        $this->assertCount(3, $migrations, 'one per table');
+        foreach ($migrations as $migration) {
+            $migration->exec();
+        }
+
+        foreach (Sharing::loginColumns() as $table => $column) {
+            $this->assertNull($dao->exactLoginColumnType($table, $column), "$table.$column");
+        }
+        $this->assertSame(['ANNA', 'bob'], $dao->getTargets($id), 'targets keep the case the owner typed');
+        $this->assertSame($id, (int) $dao->getLink('Anna', 3)['idshare']);
+        // "anna" now gets her own key on the same dashboard id
+        $other = $dao->createShare('alice', 6, 'other', true, [], '2026-06-16 10:00:00');
+        $dao->createLink('anna', 3, $other);
+        $this->assertSame($other, (int) $dao->getLink('anna', 3)['idshare']);
+        $this->assertSame($id, (int) $dao->getLink('Anna', 3)['idshare']);
+        $this->assertSame([], $update->getMigrations($updater), 'a second run has nothing to do');
+    }
+
+    /** this branch's update with the login collation (its file name is the branch's own version) */
+    private function loginCollationUpdate()
+    {
+        $files = array_values(array_filter(glob(__DIR__ . '/../../../Updates/*.php'), function ($file) {
+            return strpos((string) file_get_contents($file), 'loginColumns') !== false;
+        }));
+        $this->assertCount(1, $files);
+        require_once $files[0];
+        $class = 'Piwik\\Plugins\\FeinwerkDashboardSharing\\Updates_' . strtolower(str_replace(['-', '.'], '_', basename($files[0], '.php')));
+
+        return new $class(\Piwik\Container\StaticContainer::get(\Piwik\Updater\Migration\Factory::class));
+    }
+
+    public function test_afterTheUpdate_twoLoginsEachKeepTheirSubscriptionOnOneKey()
+    {
+        $dao = $this->daoWithTwoUsers();
+        $id = $dao->createShare('alice', 5, 'public', true, [], '2026-06-16 10:00:00');
+        $other = $dao->createShare('alice', 6, 'other', true, [], '2026-06-16 10:00:00');
+        $dao->createLink('Anna', 3, $id);
+        $dao->createLink('anna', 3, $other);
+
+        $this->assertSame($id, (int) $dao->getLink('Anna', 3)['idshare']);
+        $this->assertSame($other, (int) $dao->getLink('anna', 3)['idshare']);
+        $this->assertSame([['iddashboard' => 3, 'owner' => 'alice']], $dao->getSubscribedDashboards('anna'));
+
+        $dao->deleteLink('anna', 3);
+        $this->assertFalse($dao->getLink('anna', 3));
+        $this->assertNotFalse($dao->getLink('Anna', 3), 'deleting anna\'s link keeps Anna\'s');
+    }
+
+    public function test_beforeTheUpdate_aSubscriptionOfAnotherLogin_isNeitherReadNorOverwritten()
+    {
+        $this->giveTheTablesACaseInsensitiveCollation();
         $dao = $this->daoWithTwoUsers();
         $id = $dao->createShare('alice', 5, 'public', true, [], '2026-06-16 10:00:00');
         $dao->createLink('Anna', 3, $id);
@@ -137,6 +211,7 @@ class SharingTest extends IntegrationTestCase
         }
         $this->assertNotNull($refused, 'the key (anna, 3) belongs to Anna');
         $this->assertStringContainsString('another user', $refused->getMessage());
+        $this->assertSame(409, $refused->getCode(), 'the API answers with HTTP 409');
         $this->assertSame($id, (int) $dao->getLink('Anna', 3)['idshare'], 'Anna\'s subscription is unchanged');
 
         $dao->createLink('Anna', 3, $other);
@@ -146,9 +221,10 @@ class SharingTest extends IntegrationTestCase
         $this->assertNotFalse($dao->getLink('Anna', 3), 'deleting anna\'s link keeps Anna\'s');
     }
 
-    public function test_sharesOfAnotherOwner_areNotMine_butAvailable()
+    /** @dataProvider tableStates */
+    public function test_sharesOfAnotherOwner_areNotMine_butAvailable(bool $beforeTheUpdate)
     {
-        $this->skipUnlessTheTablesIgnoreCase();
+        $this->tablesAsIn($beforeTheUpdate);
         $dao = $this->daoWithTwoUsers();
         $id = $dao->createShare('Anna', 5, 'by Anna', true, [], '2026-06-16 10:00:00');
 
@@ -157,9 +233,10 @@ class SharingTest extends IntegrationTestCase
         $this->assertSame([], $dao->getSharesAvailableTo('Anna'), 'never the owner\'s own share');
     }
 
-    public function test_aTargetOfAnotherUser_isNotOffered()
+    /** @dataProvider tableStates */
+    public function test_aTargetOfAnotherUser_isNotOffered(bool $beforeTheUpdate)
     {
-        $this->skipUnlessTheTablesIgnoreCase();
+        $this->tablesAsIn($beforeTheUpdate);
         $dao = $this->daoWithTwoUsers();
         $id = $dao->createShare('alice', 5, 'for Anna', false, ['Anna'], '2026-06-16 10:00:00');
 
@@ -167,20 +244,23 @@ class SharingTest extends IntegrationTestCase
         $this->assertSame([(int) $id], array_map('intval', array_column($dao->getSharesAvailableTo('Anna'), 'idshare')));
     }
 
-    public function test_aTargetTypedInAnotherCase_isOfferedToTheUserMatomoResolvesItTo()
+    /** @dataProvider tableStates */
+    public function test_aTargetTypedInAnotherCase_isOfferedToTheUserMatomoResolvesItTo(bool $beforeTheUpdate)
     {
-        $this->skipUnlessTheTablesIgnoreCase();
+        $this->tablesAsIn($beforeTheUpdate);
         $dao = new Sharing(static function (string $login): string {
             return strtolower($login) === 'anna' ? 'anna' : '';
         });
         $id = $dao->createShare('alice', 5, 'for Anna', false, ['ANNA'], '2026-06-16 10:00:00');
 
         $this->assertSame([(int) $id], array_map('intval', array_column($dao->getSharesAvailableTo('anna'), 'idshare')));
+        $this->assertSame(['ANNA'], $dao->getTargets($id), 'the target stays as the owner typed it');
     }
 
-    public function test_deletingAUser_keepsTheRowsOfAnotherLogin()
+    /** @dataProvider tableStates */
+    public function test_deletingAUser_keepsTheRowsOfAnotherLogin(bool $beforeTheUpdate)
     {
-        $this->skipUnlessTheTablesIgnoreCase();
+        $this->tablesAsIn($beforeTheUpdate);
         $dao = $this->daoWithTwoUsers();
         $owned = $dao->createShare('Anna', 5, 'by Anna', true, [], '2026-06-16 10:00:00');
         $offered = $dao->createShare('alice', 6, 'for Anna', false, ['Anna'], '2026-06-16 10:00:00');
@@ -198,10 +278,14 @@ class SharingTest extends IntegrationTestCase
         $this->assertFalse($dao->getLink('Anna', 3));
     }
 
-    /** Matomo deletes "anna" when a super user asks for "ANNA", and posts the event with "ANNA" after the user is gone. */
-    public function test_deletingAUserNamedInAnotherSpelling_removesTheirRows_andKeepsAnotherUsers()
+    /**
+     * Matomo deletes "anna" when a super user asks for "ANNA", and posts the event with "ANNA" after the user is gone.
+     *
+     * @dataProvider tableStates
+     */
+    public function test_deletingAUserNamedInAnotherSpelling_removesTheirRows_andKeepsAnotherUsers(bool $beforeTheUpdate)
     {
-        $this->skipUnlessTheTablesIgnoreCase();
+        $this->tablesAsIn($beforeTheUpdate);
         $dao = new Sharing(static function (string $login): string {
             return $login === 'Anna' ? 'Anna' : ''; // anna is deleted, Anna still exists
         });
