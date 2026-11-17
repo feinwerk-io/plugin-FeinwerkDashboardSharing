@@ -88,6 +88,23 @@ class DashboardRemovalTest extends IntegrationTestCase
         $this->assertNotFalse($this->sharing->getShare($kept));
     }
 
+    /** A super user may name the user in another spelling; Matomo removes the dashboard by its own collation. */
+    public function test_removingADashboardOfAUserNamedInAnotherSpelling_dropsItsShares()
+    {
+        $this->createUser('alice', array(1));
+        if (empty((new \Piwik\Plugins\UsersManager\Model())->getUser('ALICE'))) {
+            $this->markTestSkipped('the test database compares logins case-sensitively');
+        }
+        FakeAccess::$superUser = true;
+        $source = (int) $this->dashboards->createNewDashboardForUser('alice', 'Source', '{}');
+        $gone = $this->sharing->createShare('alice', $source, 'Gone', true, [], '2026-10-14 10:00:00');
+
+        Request::processRequest('Dashboard.removeDashboard', ['idDashboard' => $source, 'login' => 'ALICE']);
+
+        $this->assertEmpty($this->dashboards->getLayoutForUser('alice', $source), 'Matomo removed alice\'s dashboard');
+        $this->assertFalse($this->sharing->getShare($gone), 'its share is dropped as well');
+    }
+
     public function provideContainerConfig()
     {
         return array(

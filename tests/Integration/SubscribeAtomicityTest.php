@@ -68,6 +68,38 @@ class SubscribeAtomicityTest extends IntegrationTestCase
         $this->assertSame(0, (int) (new Sharing())->getSubscriberCount($this->idShare));
     }
 
+    /**
+     * The new copy's key (subscriber, dashboard id) is held by another login that the table's collation treats as the
+     * same ("ALICE" for alice): the subscription is refused and rolled back, the other row stays as it was.
+     */
+    public function test_subscribe_refusesAKeyOfAnotherLogin_andRollsBack()
+    {
+        $sharing = new Sharing();
+        $bobDash = (int) (new DashboardModel())->createNewDashboardForUser('bob', 'Bob dashboard', '{}');
+        $this->idShare = (int) $sharing->createShare('bob', $bobDash, 'Shared', true, array(), '2026-10-13 10:00:00');
+        $other = (int) $sharing->createShare('bob', $bobDash, 'Other', true, array(), '2026-10-13 10:00:00');
+        // alice has no dashboard yet: the subscription stores her default at id 1 and puts the copy at id 2
+        $sharing->createLink('ALICE', 2, $other);
+        if ($sharing->getLink('ALICE', 2) === false || (int) \Piwik\Db::fetchOne(
+            sprintf('SELECT COUNT(*) FROM `%s` WHERE `subscriber_login` = ?', \Piwik\Common::prefixTable('shared_dashboard_link')),
+            array('alice')
+        ) === 0) {
+            $this->markTestSkipped('the test database compares logins case-sensitively');
+        }
+
+        $refused = null;
+        try {
+            (new SharingService())->subscribe($this->idShare, 'alice');
+        } catch (\Exception $e) {
+            $refused = $e;
+        }
+        $this->assertNotNull($refused, 'the key (alice, 2) belongs to ALICE (the copy gets id 2 after the stored default)');
+        $this->assertStringContainsString('another user', $refused->getMessage());
+
+        $this->assertSame(array(), (new DashboardModel())->getAllDashboardsForUser('alice'), 'rolled back, no orphan dashboard');
+        $this->assertSame($other, (int) $sharing->getLink('ALICE', 2)['idshare'], 'ALICE\'s subscription is unchanged');
+    }
+
     public function provideContainerConfig()
     {
         return array(

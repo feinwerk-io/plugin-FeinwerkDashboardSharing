@@ -1,6 +1,6 @@
 {
     "FeinwerkDashboardSharing": {
-        "PluginDescription": "Share a Matomo dashboard with your team or everyone. Recipients get an auto-synced, read-only copy.",
+        "PluginDescription": "Share a dashboard with your team. Colleagues subscribe to a read-only copy that updates itself whenever you change the original.",
         "ShareDashboard": "Share this dashboard",
         "SharedDashboards": "Import a shared dashboard",
         "ShareName": "Name for recipients",
@@ -16,7 +16,7 @@
         "Unshare": "Stop sharing",
         "Subscribe": "Subscribe",
         "Unsubscribe": "Unsubscribe",
-        "Subscribers": "%s subscriber(s)",
+        "Subscribers": "Subscribers: %s",
         "NoShares": "You have not shared any dashboard yet.",
         "NoAvailableShares": "No shared dashboards are available to you.",
         "SyncedBadge": "Synced from %s",

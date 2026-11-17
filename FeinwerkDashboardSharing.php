@@ -41,6 +41,9 @@ class FeinwerkDashboardSharing extends \Piwik\Plugin
         if ($idDashboard <= 0 || $login === '' || $login === 'anonymous') {
             return;
         }
+        // A super user may name the user in another spelling ("ALICE"); Matomo found the dashboard by its own collation,
+        // the plugin compares exactly: use the stored spelling of that user.
+        $login = (new Dao\Sharing())->storedLogin($login);
         (new SharingService())->forgetDashboard($login, $idDashboard);
     }
 

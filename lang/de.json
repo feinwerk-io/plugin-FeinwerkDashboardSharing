@@ -1,6 +1,6 @@
 {
     "FeinwerkDashboardSharing": {
-        "PluginDescription": "Teilen Sie ein Matomo-Dashboard mit Ihrem Team oder allen. Empfänger erhalten eine automatisch synchronisierte, schreibgeschützte Kopie.",
+        "PluginDescription": "Teilen Sie ein Dashboard mit Ihrem Team. Kollegen abonnieren eine schreibgeschützte Kopie, die sich aktualisiert, sobald Sie das Original ändern.",
         "ShareDashboard": "Dieses Dashboard teilen",
         "SharedDashboards": "Geteiltes Dashboard importieren",
         "ShareName": "Name für Empfänger",
@@ -16,7 +16,7 @@
         "Unshare": "Freigabe beenden",
         "Subscribe": "Abonnieren",
         "Unsubscribe": "Abo beenden",
-        "Subscribers": "%s Abonnent(en)",
+        "Subscribers": "Abonnenten: %s",
         "NoShares": "Sie haben noch kein Dashboard geteilt.",
         "NoAvailableShares": "Es sind keine geteilten Dashboards für Sie verfügbar.",
         "SyncedBadge": "Synchronisiert von %s",

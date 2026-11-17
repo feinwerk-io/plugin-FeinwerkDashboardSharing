@@ -1,41 +1,56 @@
 # Feinwerk Dashboard Sharing
 
-Share a Matomo dashboard with your team. Recipients get an automatically
-synchronised, read-only copy that always reflects your current version.
+Share a dashboard with your team. Colleagues subscribe to a read-only copy that updates itself whenever you change the
+original.
 
 ## Description
 
-Dashboards in Matomo are personal. If you have built a dashboard that your colleagues should also
-see, you would normally have to recreate it for each person.
+**Build a dashboard once and share it with your team: everyone sees your current version, nobody can change it.**
 
-Feinwerk Dashboard Sharing lets you share one of your dashboards:
+Dashboards in Matomo are personal. If you have built a dashboard that your colleagues should also see, you would
+normally have to recreate it for each person. Feinwerk Dashboard Sharing lets you share it instead:
 
-- **Share with specific users or your whole team:** pick the Matomo users who may subscribe, or offer
-  the dashboard to all users who can see one of your websites.
-- **Auto-synced mirror:** a subscriber gets their own copy of the dashboard. When you change your
-  dashboard, the copy is updated the next time the subscriber opens it.
-- **Read-only for recipients:** subscribers can look at the shared dashboard, but cannot change the
-  layout or the widgets of the copy. Your original stays under your control.
+- **Share with specific users or your whole team:** pick the Matomo users who may subscribe, or offer the dashboard to
+  all users who can see one of your websites.
+- **Always up to date:** a subscriber gets their own copy of the dashboard. When you change your dashboard, the copy is
+  updated the next time the subscriber opens it.
+- **Read-only for recipients:** subscribers can look at the shared dashboard, but cannot change the layout or the
+  widgets of the copy. Your original stays under your control.
 - **Stop sharing at any time:** withdrawing a share removes it from the list of available dashboards.
-- **Only within your websites:** a shared dashboard is offered only to users who can see at least one
-  of your websites (super users see every share). Recipients see the reports with their own
-  permissions, so only for websites they can access in Matomo.
+- **Only within your websites:** a shared dashboard is offered only to users who can see at least one of your websites
+  (super users see every share). Recipients see the reports with their own permissions, so only for websites they can
+  access in Matomo.
+- **Light and dark mode, English and German.**
 
-Documentation and more Plugins for Matomo: [Feinwerk Plugins](https://plugins.feinwerk.io/en/plugins/FeinwerkDashboardSharing).
+The plugin never modifies Matomo core or the bundled Dashboard plugin and keeps shares and subscriptions in tables of
+its own, so it survives Matomo updates.
 
-## How it works (no core patches)
+**Works with Feinwerk Dashboard Segment (free):** shared dashboards keep the segment and time range of each widget.
 
-The plugin is purely additive. It never modifies Matomo core or the bundled Dashboard plugin, so it
-survives Matomo updates.
+**Get started:** open a dashboard and click *Share this dashboard*. Your colleagues find it under *Import a shared
+dashboard*.
+
+**More Plugins for Matomo by Feinwerk:** install [Feinwerk Connector](https://plugins.matomo.org/FeinwerkMarketplaceConnector)
+from the Matomo Marketplace to discover, install and update all Feinwerk plugins, free and paid, right in your Matomo.
+Documentation: [plugins.feinwerk.io](https://plugins.feinwerk.io/en/plugins/FeinwerkDashboardSharing).
 
 ## Works with Feinwerk Dashboard Segment
 
-If [Feinwerk Dashboard Segment](https://plugins.feinwerk.io/en/plugins/FeinwerkDashboardSegment) is
-installed as well, shared dashboards also carry the per-widget segments and per-widget time ranges
-you have set. Recipients then see the same segmented view as you.
+If [Feinwerk Dashboard Segment](https://plugins.feinwerk.io/en/plugins/FeinwerkDashboardSegment) is installed as well,
+shared dashboards also carry the per-widget segments and per-widget time ranges you have set. Recipients then see the
+same segmented view as you. This is optional: Feinwerk Dashboard Sharing works on its own, and it has no hard dependency
+on Feinwerk Dashboard Segment.
 
-This is optional. Feinwerk Dashboard Sharing works on its own, and it has no hard dependency on
-Feinwerk Dashboard Segment.
+## Privacy features
+
+- **No visitor data:** the plugin stores only the shares themselves: the name of a share, the dashboard it comes from,
+  the login of its owner, the logins it is offered to and the logins of its subscribers. It reads no tracking data and
+  adds nothing to the tracker.
+- **Nothing leaves your Matomo:** the plugin sends no data anywhere and loads nothing from outside.
+- **Your permissions stay in force:** a share is offered only to users who can see at least one of the owner's
+  websites, and every recipient sees the numbers with their own Matomo permissions.
+- **Clean removal:** when a Matomo user is deleted, their shares, offers and subscriptions are deleted as well;
+  uninstalling the plugin removes its tables.
 
 ## Requirements
 

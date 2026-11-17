@@ -48,4 +48,47 @@ class DeletedUsersCleanupTest extends IntegrationTestCase
         $this->assertFalse($sharing->getShare($onlyForGhost), 'a share with logins whose last login is gone');
         $this->assertNotFalse($sharing->getShare($bobToAll), 'a share with everyone needs no target rows');
     }
+
+    /**
+     * Several spellings of one deleted login ("Carl" typed as a target, "carl" stored as subscriber) are each removed.
+     * The target comes first, so a cleanup of only that spelling with an exact comparison would keep the subscription.
+     * (The exact de-duplication instead of UNION only matters when Matomo's user table and the plugin's tables use
+     * different collations, which this test database cannot reproduce.)
+     */
+    public function test_activation_removesEverySpellingOfADeletedLogin()
+    {
+        $sharing = new Sharing();
+        $sharing->install();
+        $this->createWebsites(1);
+        $this->createUser('bob', array(1));
+
+        $forCarl = $sharing->createShare('bob', 2, 'For Carl', false, ['Carl', 'bob'], '2026-10-15 10:00:00');
+        $sharing->createLink('carl', 3, $forCarl);
+
+        (new FeinwerkDashboardSharing())->activate();
+
+        $this->assertSame(['bob'], $sharing->getTargets($forCarl), 'target in another spelling');
+        $this->assertFalse($sharing->getLink('carl', 3), 'subscription of the deleted login');
+    }
+
+    /** A target typed in another case for an existing user stays: Matomo resolves it to that user. */
+    public function test_activation_keepsATargetTypedInAnotherCaseForAnExistingUser()
+    {
+        $sharing = new Sharing();
+        $sharing->install();
+        $this->createWebsites(1);
+        $this->createUser('bob', array(1));
+        $this->createUser('dora', array(1));
+        if (empty((new \Piwik\Plugins\UsersManager\Model())->getUser('DORA'))) {
+            $this->markTestSkipped('the test database compares logins case-sensitively');
+        }
+
+        $forDora = $sharing->createShare('bob', 2, 'For Dora', false, ['DORA'], '2026-10-15 10:00:00');
+
+        (new FeinwerkDashboardSharing())->activate();
+
+        $this->assertSame(['DORA'], $sharing->getTargets($forDora));
+        $available = array_map('intval', array_column($sharing->getSharesAvailableTo('dora'), 'idshare'));
+        $this->assertSame([(int) $forDora], $available, 'Matomo\'s own user lookup resolves "DORA" to dora');
+    }
 }

@@ -1,5 +1,13 @@
 # Changelog
 
+## 5.0.2
+
+- Security: shares and subscriptions are now kept strictly apart for users whose logins the database treats as the same
+  (possible on some installations, for example with "ß" and "ss"). One such user could see shares meant for the other
+  or change the other user's shares and subscriptions. Please update.
+- My shares now shows the number of subscribers as "Subscribers: 4".
+- Shorter plugin description.
+
 ## 5.0.1
 
 - The feedback question in the share dialog and the tips from Feinwerk (in the share dialog, on the start page of the
