@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.2.0
+
+- The buttons Share dashboard and Import dashboard now sit in Matomo's bar at the top, next to the website, date and
+  segment selection, instead of a line of their own above the widgets. They look like the other buttons there and
+  appear only while one of your own dashboards is open.
+
 ## 5.1.0
 
 - The plugin's API now answers errors with a fitting HTTP status instead of 200: 400 for invalid input, 404 for a

@@ -26,7 +26,19 @@ class FeinwerkDashboardSharing extends \Piwik\Plugin
             'Db.getTablesInstalled'                  => 'getTablesInstalled',
             'UsersManager.deleteUser'                => 'deleteUser',
             'API.Dashboard.removeDashboard.end'      => 'onDashboardRemoved',
+            // after Matomo's own segment selector, which uses the same event
+            'Template.nextToCalendar'                => array('function' => 'renderTopControlSlot', 'after' => true),
         );
+    }
+
+    /**
+     * A place in Matomo's bar at the top (website, date, segment, Manage Dashboard), after the segment selector. While an
+     * editable dashboard is shown, the script puts the share buttons into it; elsewhere it stays empty (display: contents,
+     * so it takes no room). Where the bar is missing, the script puts the buttons above the widgets instead.
+     */
+    public function renderTopControlSlot(&$out)
+    {
+        $out .= '<div id="fwsh-topcontrol-slot" class="fwsh-topControlSlot"></div>';
     }
 
     /**
@@ -61,6 +73,10 @@ class FeinwerkDashboardSharing extends \Piwik\Plugin
     {
         $keys[] = 'FeinwerkDashboardSharing_ShareDashboard';
         $keys[] = 'FeinwerkDashboardSharing_SharedDashboards';
+        $keys[] = 'FeinwerkDashboardSharing_ShareButton';
+        $keys[] = 'FeinwerkDashboardSharing_ShareButtonTooltip';
+        $keys[] = 'FeinwerkDashboardSharing_ImportButton';
+        $keys[] = 'FeinwerkDashboardSharing_ImportButtonTooltip';
         $keys[] = 'FeinwerkDashboardSharing_ShareName';
         $keys[] = 'FeinwerkDashboardSharing_ShareWhoTitle';
         $keys[] = 'FeinwerkDashboardSharing_ShareToAll';

@@ -53,6 +53,25 @@
         return ajax.send();
     }
 
+    // Whether a dashboard is a synced copy. Not abortable: Matomo 5.14 and 6 abort every queued request on a period,
+    // date or segment change, and an aborted request never answers (Matomo's ajaxHelper neither resolves nor rejects).
+    // Matomo 5.0 has no such flag and aborts it anyway: its request handle reports the abort, and onLost runs.
+    function requestLinkInfo(id, onLost) {
+        var ajax = new window.ajaxHelper();
+        ajax.addParams({ module: 'FeinwerkDashboardSharing', action: 'getLinkInfo', idDashboard: id }, 'get');
+        ajax.withTokenInUrl();
+        ajax.setFormat('json');
+        ajax.abortable = false;
+        var answer = ajax.send();
+        var handle = ajax.requestHandle;
+        if (handle && typeof handle.fail === 'function') {
+            handle.fail(function (xhr) {
+                if (xhr && (xhr.statusText === 'abort' || xhr.status === 0)) { onLost(); }
+            });
+        }
+        return answer;
+    }
+
     // User-facing toast for a failed action. Reuses Matomo's own notification UI; guarded so a missing
     // require() (e.g. in the JS smoke test) never throws.
     function notify(message, context) {
@@ -100,9 +119,29 @@
         return false;
     }
 
-    // Remove this plugin's controls (share/import buttons) -- used on a read-only mirror dashboard.
-    function stripDecorations() {
+    // Where the share buttons go: a slot in Matomo's bar at the top (website, date, segment, Manage Dashboard), rendered
+    // through Template.nextToCalendar. Where the bar is missing, they sit in a row above the widgets (#fwshControls).
+    var TOP_SLOT = '#fwsh-topcontrol-slot';
+
+    // The dashboard that getLinkInfo has confirmed as the user's own (not a synced copy); null while that answer is
+    // pending, so widgets rendering before it never put the buttons into the bar of a read-only copy.
+    var editableDashboardId = null;
+
+    // Every (re)entry into a dashboard is a new round: answers, lost requests and retry timers of an earlier round do
+    // nothing. A lost answer (Matomo 5.0 aborts the request) is asked again after these delays, then the dashboard
+    // counts as the user's own, as after a failed request.
+    var linkInfoRound = 0;
+    var LINK_INFO_RETRY_DELAYS = [300, 1500];
+
+    // Remove this plugin's controls (share/import buttons): on a read-only mirror dashboard and whenever the page context
+    // changes (the top bar outlives the dashboard, so its buttons must go explicitly).
+    function removeShareControls() {
         window.$('#fwshControls').remove();
+        window.$(TOP_SLOT).empty();
+    }
+
+    function stripDecorations() {
+        removeShareControls();
     }
 
     function closeModal() { window.$('.fwsh-overlay').remove(); }
@@ -255,11 +294,34 @@
         return $b;
     }
 
-    // This plugin owns its control row (#fwshControls, above the dashboard area) so it works with or
-    // without FeinwerkDashboardSegment installed.
+    // A button in Matomo's own top-control markup (as Dashboard.DashboardSettings, "Manage Dashboard"), so it looks like
+    // the controls next to it in light and dark mode. a.title, not button.title: Matomo 5.0 styles only span and a.
+    function makeTopControl(linkClass, iconClass, label, tooltip, onClick) {
+        var $ctrl = window.$('<div class="piwikSelector borderedControl piwikTopControl fwsh-topControl"></div>');
+        var $link = window.$('<a href="javascript:;" role="button" class="title"></a>').addClass(linkClass).attr('title', tooltip);
+        $link.append(window.$('<span class="icon icon-fixed fwsh-topControlIcon" aria-hidden="true"></span>').addClass(iconClass));
+        $link.append(window.$('<span class="fwsh-topControlText"></span>').text(label));
+        $link.on('click', function (e) { e.preventDefault(); e.stopPropagation(); onClick(); });
+        $ctrl.append($link);
+        return $ctrl;
+    }
+
+    // The share and import buttons, only while an editable dashboard is open. This plugin owns them, so they work with
+    // or without FeinwerkDashboardSegment installed (whose button sits right before them in the bar).
     function injectShareControls() {
+        var id = currentDashboardId();
+        if (id === null || id !== editableDashboardId || FeinwerkDashboardSharing.readOnly) { return; }
+        if (window.$('.fwsh-shareLink').length) { return; }
+        var $slot = window.$(TOP_SLOT);
+        if ($slot.length) {
+            $slot.append(makeTopControl('fwsh-shareLink', 'icon-export', _pk_translate('FeinwerkDashboardSharing_ShareButton'),
+                _pk_translate('FeinwerkDashboardSharing_ShareButtonTooltip'), openShareDialog));
+            $slot.append(makeTopControl('fwsh-availLink', 'icon-download', _pk_translate('FeinwerkDashboardSharing_ImportButton'),
+                _pk_translate('FeinwerkDashboardSharing_ImportButtonTooltip'), openAvailablePanel));
+            return;
+        }
         var $area = window.$('#dashboardWidgetsArea');
-        if (!$area.length || window.$('#fwshControls').length) { return; }
+        if (!$area.length) { return; }
         var $wrap = window.$('<div id="fwshControls" class="fwsh-shareControls"></div>');
         $wrap.append(makeIconButton('icon-export', _pk_translate('FeinwerkDashboardSharing_ShareDashboard'), openShareDialog).addClass('fwsh-shareLink'));
         $wrap.append(makeIconButton('icon-download', _pk_translate('FeinwerkDashboardSharing_SharedDashboards'), openAvailablePanel).addClass('fwsh-availLink'));
@@ -299,16 +361,37 @@
     }
 
     // Entry point for (re)entering a dashboard: subscribed/linked dashboards auto-sync from source.
-    function enterDashboard() {
+    // `attempt`: the number of earlier requests for this dashboard whose answer was lost (0 when entering it).
+    function enterDashboard(attempt) {
         var id = currentDashboardId();
+        var round = ++linkInfoRound;
+        attempt = typeof attempt === 'number' ? attempt : 0;
+        editableDashboardId = null;
         if (id === null) {
             FeinwerkDashboardSharing.readOnly = false;
             setReadOnlyMarker(false);
             removeLinkedBanner();
-            injectShareControls();
             return;
         }
-        dsAjax('getLinkInfo', { idDashboard: id }).then(function (info) {
+        // No answer, or a failed request: as before, an unknown state counts as the user's own dashboard.
+        function showAsOwn() {
+            editableDashboardId = id;
+            FeinwerkDashboardSharing.readOnly = false;
+            setReadOnlyMarker(false);
+            injectShareControls();
+        }
+        // still this round, on this dashboard (the user has not moved on, no newer request was sent)
+        function current() { return round === linkInfoRound && currentDashboardId() === id; }
+        function onLost() {
+            if (!current()) { return; }
+            if (attempt >= LINK_INFO_RETRY_DELAYS.length) { showAsOwn(); return; }
+            // after Matomo's abort pass (a request sent from inside it would be aborted by the same pass)
+            window.setTimeout(function () {
+                if (current()) { enterDashboard(attempt + 1); }
+            }, LINK_INFO_RETRY_DELAYS[attempt]);
+        }
+        requestLinkInfo(id, onLost).then(function (info) {
+            if (!current()) { return; } // the user has moved on, or a newer request answers for this dashboard
             if (info && info.linked) {
                 FeinwerkDashboardSharing.readOnly = true;
                 FeinwerkDashboardSharing.linkedOwner = info.owner || '';
@@ -325,15 +408,15 @@
                     }, function () {});
                 }
             } else {
+                editableDashboardId = id;
                 FeinwerkDashboardSharing.readOnly = false;
                 setReadOnlyMarker(false);
                 removeLinkedBanner();
                 injectShareControls();
             }
         }, function () {
-            FeinwerkDashboardSharing.readOnly = false;
-            setReadOnlyMarker(false);
-            injectShareControls();
+            if (!current()) { return; }
+            showAsOwn();
         });
     }
 
@@ -395,6 +478,7 @@
     FeinwerkDashboardSharing.dashboardMenuLinks = DASHBOARD_MENU_LINKS;
     FeinwerkDashboardSharing.openShareDialog = openShareDialog;
     FeinwerkDashboardSharing.openAvailablePanel = openAvailablePanel;
+    FeinwerkDashboardSharing.injectShareControls = injectShareControls;
     FeinwerkDashboardSharing.firstDashboardUrl = firstDashboardUrl;
     window.FeinwerkDashboardSharing = FeinwerkDashboardSharing;
 
@@ -426,7 +510,7 @@
             var ctx = currentIdSite() + '|' + currentDashboardId();
             if (ctx === lastContext) { return; }
             lastContext = ctx;
-            window.$('#fwshControls').remove();
+            removeShareControls();
             removeLinkedBanner();
             enterDashboard();
             decorateTabs();

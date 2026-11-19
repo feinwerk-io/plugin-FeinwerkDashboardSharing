@@ -23,6 +23,28 @@
     }
 }
 
+// The slot in Matomo's top bar takes no room of its own: the buttons inside it line up with the other top controls
+// (Matomo 6 lays the bar out as a flex row, Matomo 5 as inline blocks).
+.fwsh-topControlSlot {
+    display: contents;
+}
+
+// The share and import buttons in the top bar: Matomo's own top-control classes (piwikSelector, borderedControl,
+// piwikTopControl, a.title) give them the look of the controls next to them; this only arranges icon and label the
+// same way on Matomo 5.0 (which floats .icon) and 6.
+.fwsh-topControl {
+    a.title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+    }
+
+    .fwsh-topControlIcon { float: none; }
+    .fwsh-topControlText { white-space: nowrap; }
+}
+
+// Where Matomo's top bar is missing, the buttons sit in a row above the widgets.
 .fwsh-shareControls {
     margin: 6px 0 10px;
 

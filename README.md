@@ -27,8 +27,8 @@ its own, so it survives Matomo updates.
 
 **Works with Feinwerk Dashboard Segment (free):** shared dashboards keep the segment and time range of each widget.
 
-**Get started:** open a dashboard and click *Share this dashboard*. Your colleagues find it under *Import a shared
-dashboard*.
+**Get started:** open a dashboard and click *Share dashboard* in the bar at the top, next to the date and segment
+selection. Your colleagues find it there under *Import dashboard*.
 
 **More Plugins for Matomo by Feinwerk:** install [Feinwerk Connector](https://plugins.matomo.org/FeinwerkMarketplaceConnector)
 from the Matomo Marketplace to discover, install and update all Feinwerk plugins, free and paid, right in your Matomo.
@@ -74,7 +74,7 @@ on Feinwerk Dashboard Segment.
 **Share a dashboard**
 
 1. Open the dashboard you want to share.
-2. Click **Share this dashboard**.
+2. Click **Share dashboard** in the bar at the top, next to the date and segment selection.
 3. Enter a name for recipients (up to 100 characters) and choose who may subscribe: **All users who
    can see one of your websites**, or **Specific users** with a comma-separated list of logins. Admins
    can also pick the users from a list.
@@ -82,7 +82,7 @@ on Feinwerk Dashboard Segment.
 
 **Import a shared dashboard**
 
-1. Open the dashboard list and click **Import a shared dashboard**.
+1. Open one of your dashboards and click **Import dashboard** in the bar at the top.
 2. Choose a shared dashboard from the list and click **Subscribe**. The dashboard is added to your
    dashboards as a read-only copy, marked as synced from its owner.
 3. To remove it again, click **Unsubscribe**.
