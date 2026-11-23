@@ -54,7 +54,7 @@ on Feinwerk Dashboard Segment.
 
 ## Requirements
 
-- Matomo 5
+- Matomo 6
 - Matomo 5: version 5.x, Matomo 6: version 6.x
 - PHP 8.1 or newer
 - The bundled **Dashboard** plugin (active by default).

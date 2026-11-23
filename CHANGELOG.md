@@ -1,56 +1,30 @@
 # Changelog
 
-## 5.3.0
+## 6.0.0
 
-- The plugin now speaks French, Spanish and Italian as well as English and German.
+The first stable version for Matomo 6. Compared with the last beta for Matomo 6 before the new version numbers
+(2.0.0-beta.3):
+
+- New version numbers: the plugin for Matomo 6 now carries version 6.x, the one for Matomo 5 version 5.x.
+- The buttons Share dashboard and Import dashboard sit in Matomo's bar at the top, next to the website, date and segment
+  selection, instead of a line of their own above the widgets. They look like the other buttons there and appear only
+  while one of your own dashboards is open.
+- Security: shares and subscriptions are kept strictly apart for users whose logins the database treats as the same
+  (possible on some installations, for example with "ß" and "ss"). The database now also tells logins apart that differ
+  only in case: the update changes the login columns of the plugin's three tables so that "Anna" and "anna" are two
+  users there too. It changes no data; a share for a login typed in another case ("Bob" for bob) still reaches that user.
+- The plugin's API answers errors with a fitting HTTP status instead of 200: 400 for invalid input, 404 for a dashboard
+  or share that does not exist or is not offered to you. Scripts that call the API can rely on the status.
 - While the free Feinwerk Connector is not active, super users find Administration › Feinwerk Plugins › Install
   Feinwerk Connector: one click installs and activates it, after Matomo's password check. With `connector_installer = 0`
   in the section `[FeinwerkMarketplaceConnector]` of `config/config.ini.php` the entry stays hidden for all Feinwerk
   plugins.
+- The plugin now speaks French, Spanish and Italian as well as English and German.
+- My shares shows the number of subscribers as "Subscribers: 4".
+- The share dialog draws its borders in Matomo 6's border colour.
+- Shorter plugin description; the demo link of the plugin preview works again.
 
-## 5.2.0
-
-- The buttons Share dashboard and Import dashboard now sit in Matomo's bar at the top, next to the website, date and
-  segment selection, instead of a line of their own above the widgets. They look like the other buttons there and
-  appear only while one of your own dashboards is open.
-
-## 5.1.0
-
-- The plugin's API now answers errors with a fitting HTTP status instead of 200: 400 for invalid input, 404 for a
-  dashboard or share that does not exist or is not offered to you. Scripts that call the API can rely on the status.
-- The database now tells logins apart that differ only in case: the update changes the login columns of the plugin's
-  three tables so that "Anna" and "anna" are two users there too. It changes no data; a share for a login typed in
-  another case ("Bob" for bob) still reaches that user.
-- The demo link in the Matomo Marketplace works again.
-
-## 5.0.2
-
-- Security: shares and subscriptions are now kept strictly apart for users whose logins the database treats as the same
-  (possible on some installations, for example with "ß" and "ss"). One such user could see shares meant for the other
-  or change the other user's shares and subscriptions. Please update.
-- My shares now shows the number of subscribers as "Subscribers: 4".
-- Shorter plugin description.
-
-## 5.0.1
-
-- The feedback question in the share dialog and the tips from Feinwerk (in the share dialog, on the start page of the
-  administration and at the end of the Campaigns, Ecommerce overview and Goals overview reports) are removed again. The
-  plugin shows no notes on other Feinwerk offers.
-
-## 5.0.0
-
-- At the end of the share dialog you can now tell us whether dashboard sharing is helpful for you, and open the
-  Feinwerk support form. Your Matomo server sends only your answer with the plugin and Matomo version, the browser
-  family and the language of Matomo, nothing about you, your websites or your visitors. `feedback = 0` in the section
-  `[FeinwerkDashboardSharing]` of `config/config.ini.php` switches the question off.
-- Tips from Feinwerk: admins and super users see short notes on other Feinwerk offers, one line at the end of the share
-  dialog, one banner on the start page of Matomo's administration and one box at the end of the Campaigns, Ecommerce
-  overview and Goals overview reports. Nothing is loaded from outside, "×" hides a tip for 30 days, and
-  `promotions = 0` in `[FeinwerkDashboardSharing]` (or in `[FeinwerkMarketplaceConnector]` for all Feinwerk plugins)
-  switches them off. Shared dashboards never show them.
-- Version numbers now follow Matomo: 5.x for Matomo 5 (this release follows 1.0.4), 6.x for Matomo 6.
-
-## 1.0.4
+## 2.0.0-beta.3
 
 - Shared dashboards are now offered only to users who can see at least one of the owner's websites, also when they
   were shared with a list of logins. Super users see every share. Before, a share with all users reached every user of
@@ -67,8 +41,14 @@
 - When the plugin is activated, it removes the shares and subscriptions of users who were deleted while it was
   inactive, so a new user with the same login does not get them.
 
-## 1.0.3
+## 2.0.0-beta.2
 
+- Goal pages and other reports are no longer mistaken for a subscribed dashboard with the same number. Before, opening
+  such a page could update your copy of the shared dashboard in the background.
+
+## 2.0.0-beta.1
+
+- Works with Matomo 6. For Matomo 5, version 1.x stays available and is maintained in parallel.
 - Subscribing to a shared dashboard no longer replaces your own main dashboard if you had never changed it. The shared
   dashboard is added next to it.
 - After "Unsubscribe" your main dashboard opens right away, without an error message in the background.
@@ -79,10 +59,6 @@
 - If an earlier version had put a shared dashboard in the place of your main dashboard, "Unsubscribe" now gives you your
   main dashboard back.
 - The "Share" button is easier to read in dark mode.
-- Goal pages and other reports are no longer mistaken for a subscribed dashboard with the same number. Before, opening
-  such a page could update your copy of the shared dashboard in the background.
-- Together with Feinwerk Dashboard Segment 0.7.1 or later, the owner's changed segments and time ranges of a widget show on
-  the first opening of a subscribed dashboard.
 
 ## 1.0.2
 

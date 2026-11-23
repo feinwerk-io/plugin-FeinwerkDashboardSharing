@@ -19,9 +19,9 @@ use Piwik\Updates as PiwikUpdates;
  * character set, so two Matomo users whose logins the old collation compared as equal ("Anna" and "anna") get separate
  * keys. No row changes: targets keep the case the owner typed, the lookups find them in every case. Checks each column
  * first: nothing to do (and no migration shown) when it already compares exactly or its table does not exist. Not a log
- * table, so no major update. The main line (Matomo 6) has the same change as Updates/6.0.0-beta.4.php.
+ * table, so no major update. The 5.x line has the same change as Updates/5.1.0.php.
  */
-class Updates_5_1_0 extends PiwikUpdates
+class Updates_6_0_0_beta_4 extends PiwikUpdates
 {
     /** @var MigrationFactory */
     private $migration;
