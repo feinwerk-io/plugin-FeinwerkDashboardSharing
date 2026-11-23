@@ -20,7 +20,7 @@ normally have to recreate it for each person. Feinwerk Dashboard Sharing lets yo
 - **Only within your websites:** a shared dashboard is offered only to users who can see at least one of your websites
   (super users see every share). Recipients see the reports with their own permissions, so only for websites they can
   access in Matomo.
-- **Light and dark mode, English and German.**
+- **Light and dark mode; English, German, French, Spanish and Italian.**
 
 The plugin never modifies Matomo core or the bundled Dashboard plugin and keeps shares and subscriptions in tables of
 its own, so it survives Matomo updates.

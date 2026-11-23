@@ -27,6 +27,26 @@
         "SyncedNotice": "This dashboard is synced from %s and is read-only. The owner's changes appear when you reopen it.",
         "ShareToAllLabel": "everyone",
         "SubscribedDone": "Subscribed. The dashboard was added to your dashboards.",
-        "ShareError": "The action could not be completed. Please try again."
+        "ShareError": "The action could not be completed. Please try again.",
+        "ConnectorInstallerSection": "Feinwerk Plugins",
+        "ConnectorInstallerMenu": "Install Feinwerk Connector",
+        "ConnectorInstallerMenuActivate": "Activate Feinwerk Connector",
+        "ConnectorInstallerTitle": "Feinwerk Connector",
+        "ConnectorInstallerIntro": "With the free Feinwerk Connector you install, update and license Feinwerk plugins right inside Matomo.",
+        "ConnectorInstallerInstallText": "Matomo downloads the connector from its Marketplace, installs it and then activates it.",
+        "ConnectorInstallerActivateText": "The connector is already installed but not activated yet.",
+        "ConnectorInstallerButton": "Install and activate",
+        "ConnectorInstallerButtonActivate": "Activate",
+        "ConnectorInstallerPasswordNote": "As with every plugin install, Matomo first asks for your password if you have not entered it recently.",
+        "ConnectorInstallerManual": "This Matomo cannot install plugins from its Marketplace by itself. To install the connector by hand:",
+        "ConnectorInstallerManualStep1": "Download the Feinwerk Connector:",
+        "ConnectorInstallerManualStep2": "Unzip it and put the folder FeinwerkMarketplaceConnector into the plugins directory of your Matomo.",
+        "ConnectorInstallerManualStep3": "Activate the connector under Administration, Plugins.",
+        "ConnectorInstallerManualStep3Console": "Plugin administration is switched off in this Matomo, so activate the connector on the command line:",
+        "ConnectorInstallerConsole": "The connector is already installed, but plugin administration is switched off in this Matomo. Activate it on the command line:",
+        "ConnectorInstallerPhp": "The Feinwerk Connector needs PHP %s or newer. Once your server runs it, you can install the connector here.",
+        "ConnectorInstallerWordPress": "In Matomo for WordPress the Feinwerk Connector is installed as a WordPress plugin: open Matomo Analytics, Marketplace in WordPress and search for Feinwerk.",
+        "ConnectorInstallerWordPressLink": "Open the Marketplace in WordPress",
+        "ConnectorInstallerOpen": "Open the Feinwerk Connector"
     }
 }

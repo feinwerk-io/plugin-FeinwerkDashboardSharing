@@ -1,5 +1,13 @@
 # Changelog
 
+## 5.3.0
+
+- The plugin now speaks French, Spanish and Italian as well as English and German.
+- While the free Feinwerk Connector is not active, super users find Administration › Feinwerk Plugins › Install
+  Feinwerk Connector: one click installs and activates it, after Matomo's password check. With `connector_installer = 0`
+  in the section `[FeinwerkMarketplaceConnector]` of `config/config.ini.php` the entry stays hidden for all Feinwerk
+  plugins.
+
 ## 5.2.0
 
 - The buttons Share dashboard and Import dashboard now sit in Matomo's bar at the top, next to the website, date and
